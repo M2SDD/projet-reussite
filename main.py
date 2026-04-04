@@ -10,7 +10,7 @@ DataVis sur les exports d'Arche anonymisés
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
-__credits__ = ["Matthieu PELINGRE", "Azim ROUSSANALY"]
+__credits__ = ["Matthieu PELINGRE"]
 __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Matthieu PELINGRE"

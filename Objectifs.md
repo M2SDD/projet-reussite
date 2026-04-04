@@ -11,7 +11,8 @@ Est-il possible de prédire la réussite d'un apprenant en analysant ses traces 
 
 ## Précisions
 Proposer un modèle qui permet de prédire la réussite ou l'échec d'un apprenant donné qui utilise l'espace ARCHE relativement à un cours donné.  
-Plus précisément, comparer la technique de régression (multiple) avec une autre technique issue de l'Intelligence artificielle (IA) et proposer une solution motivée par la méthode d'évaluation que vous adoptez.
+Plus précisément, comparer la technique de régression (multiple) avec une autre technique issue de l'Intelligence artificielle (IA) et proposer une solution motivée par la méthode d'évaluation que vous adoptez.  
+Ne pas utiliser de notebook jupyter et privilégier la POO. Les scripts nécessaires seront placés dans src et appelés dans le `main.py`. Tkinter sera utilisé pour faire l'interface graphique de l'application.
 
 
 ## Etapes
@@ -21,7 +22,7 @@ L'étude s'appuie sur des importations de données provenant de deux plateformes
 1. Logs ARCHE
 2. Gestion des notes
 
-On dispose donc au départ de deux fichiers au format CSV, dans le dossier data, construits à partir des imports anonymisés.
+On dispose donc au départ de deux fichiers au format CSV, dans le dossier `data`, construits à partir des imports anonymisés.
 
 
 **Logs**  
@@ -53,10 +54,10 @@ Au terme de l'étude, il est important de mesurer et de comparer la qualité des
 
 
 ## Livrables
-1. Un dossier technique expliquant :
+1. Un dossier technique (LaTeX) expliquant :
 	- La conception du logiciel
 	- La conception de l'interface utilisateur
 	- Les principaux algorithmes
 2. Un dossier d'analyse explicitant chacune des étapes du projet
 3. Une distribution du code source permettant de tester l'application
-4. Une soutenance orale
+4. Une soutenance orale (support en LaTeX)
