@@ -209,8 +209,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
 # Rapport
+Objectifs.md
 rapport/*
 !rapport/*.tex
 !rapport/*.pdf
