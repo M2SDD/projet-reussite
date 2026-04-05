@@ -1,0 +1,31 @@
+{
+  "project_type": "single",
+  "services": {
+    "backend": {
+      "path": ".",
+      "tech_stack": ["python", "pandas", "numpy", "scikit-learn", "matplotlib", "seaborn"],
+      "port": null,
+      "dev_command": "python main.py",
+      "test_command": "python -m pytest tests/ -v"
+    }
+  },
+  "infrastructure": {
+    "docker": false,
+    "database": null,
+    "ci_cd": false
+  },
+  "conventions": {
+    "language": "python",
+    "min_python_version": "3.9",
+    "linter": null,
+    "formatter": null,
+    "testing": "pytest",
+    "docstring_language": "french",
+    "module_header": "author/license header with French comments",
+    "architecture": "OOP with classes in src/ package"
+  },
+  "data_files": {
+    "logs": "data/logs_info_25_pseudo.csv",
+    "notes": "data/notes_info_25_pseudo.csv"
+  }
+}
