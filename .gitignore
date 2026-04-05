@@ -222,3 +222,4 @@ rapport/*
 .worktrees/
 .security-key
 logs/security/
+.claude_settings.json
