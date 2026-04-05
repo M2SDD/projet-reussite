@@ -20,6 +20,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+from src import Config, DataLoader, DataProcessor, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -32,4 +33,17 @@ __status__ = "Production"
 # MAIN
 # ----------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    pass
+    # Initialisation de la configuration
+    config = Config()
+
+    # Initialisation des composants principaux
+    data_loader = DataLoader()
+    data_processor = DataProcessor()
+    visualizer = Visualizer()
+
+    # Vérification de l'architecture OOP
+    print("✓ Tous les modules sont chargés avec succès")
+    print(f"✓ Config: {type(config).__name__}")
+    print(f"✓ DataLoader: {type(data_loader).__name__}")
+    print(f"✓ DataProcessor: {type(data_processor).__name__}")
+    print(f"✓ Visualizer: {type(visualizer).__name__}")
