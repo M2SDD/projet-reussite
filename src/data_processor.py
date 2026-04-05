@@ -118,6 +118,108 @@ class DataProcessor:
         df = self.handle_missing_values(df)
         return df
 
+    def clean_notes(self, df):
+        """
+        Nettoie les données de notes : validation des plages, types et doublons.
+
+        Applique séquentiellement :
+        1. Suppression des doublons
+        2. Gestion des valeurs manquantes
+        3. Conversion de 'pseudo' en int et 'note' en float
+        4. Clip des notes hors plage [NOTE_MIN, NOTE_MAX]
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de notes brut.
+
+        Returns:
+            pd.DataFrame: Le DataFrame de notes nettoyé.
+        """
+        df = self.remove_duplicates(df)
+        df = self.handle_missing_values(df)
+
+        # Ensure proper data types
+        df['pseudo'] = pd.to_numeric(df['pseudo'], errors='coerce')
+        df['note'] = pd.to_numeric(df['note'], errors='coerce')
+
+        # Drop rows where pseudo is NaN after conversion
+        invalid_pseudo = df['pseudo'].isna().sum()
+        if invalid_pseudo > 0:
+            warnings.warn(
+                f"{invalid_pseudo} lignes avec pseudo invalide supprimées.",
+                UserWarning,
+            )
+            df = df.dropna(subset=['pseudo'])
+
+        df['pseudo'] = df['pseudo'].astype(int)
+        df['note'] = df['note'].astype(float)
+
+        # Flag and clip outlier notes
+        out_of_range = (df['note'] < self.config.NOTE_MIN) | (df['note'] > self.config.NOTE_MAX)
+        outlier_count = out_of_range.sum()
+
+        if outlier_count > 0:
+            warnings.warn(
+                f"{outlier_count} notes hors plage [{self.config.NOTE_MIN}, {self.config.NOTE_MAX}] "
+                f"ont été clippées.",
+                UserWarning,
+            )
+            df['note'] = df['note'].clip(
+                lower=self.config.NOTE_MIN,
+                upper=self.config.NOTE_MAX,
+            )
+
+        return df.reset_index(drop=True)
+
+    def validate_notes(self, df):
+        """
+        Valide les données de notes et retourne un rapport d'anomalies.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de notes à valider.
+
+        Returns:
+            dict: Rapport contenant les anomalies détectées avec les clés :
+                - 'total_rows': nombre total de lignes
+                - 'missing_pseudo': nombre de pseudos manquants
+                - 'missing_note': nombre de notes manquantes
+                - 'out_of_range': nombre de notes hors plage
+                - 'duplicates': nombre de doublons
+                - 'invalid_types': nombre de valeurs non numériques
+                - 'is_valid': True si aucune anomalie détectée
+        """
+        report = {
+            'total_rows': len(df),
+            'missing_pseudo': int(df['pseudo'].isna().sum()),
+            'missing_note': int(df['note'].isna().sum()),
+            'out_of_range': 0,
+            'duplicates': int(df.duplicated().sum()),
+            'invalid_types': 0,
+            'is_valid': True,
+        }
+
+        # Check for non-numeric values
+        pseudo_numeric = pd.to_numeric(df['pseudo'], errors='coerce')
+        note_numeric = pd.to_numeric(df['note'], errors='coerce')
+
+        report['invalid_types'] = int(
+            (pseudo_numeric.isna().sum() - df['pseudo'].isna().sum())
+            + (note_numeric.isna().sum() - df['note'].isna().sum())
+        )
+
+        # Check for out-of-range notes (only on valid numeric values)
+        valid_notes = note_numeric.dropna()
+        report['out_of_range'] = int(
+            ((valid_notes < self.config.NOTE_MIN) | (valid_notes > self.config.NOTE_MAX)).sum()
+        )
+
+        # Determine overall validity
+        report['is_valid'] = all(
+            report[key] == 0
+            for key in ['missing_pseudo', 'missing_note', 'out_of_range', 'duplicates', 'invalid_types']
+        )
+
+        return report
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
