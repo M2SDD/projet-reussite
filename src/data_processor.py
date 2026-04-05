@@ -45,6 +45,18 @@ class DataProcessor:
             config (Config): Instance de configuration. Si None, utilise la configuration par défaut.
         """
         self.config = config if config is not None else Config()
+        self._cleaning_report = {
+            'logs_initial_rows': 0,
+            'logs_duplicates_removed': 0,
+            'logs_missing_values': 0,
+            'notes_initial_rows': 0,
+            'notes_duplicates_removed': 0,
+            'notes_invalid_pseudo': 0,
+            'notes_clipped': 0,
+            'students_logs_only': 0,
+            'students_notes_only': 0,
+            'students_merged': 0,
+        }
 
     def remove_duplicates(self, df):
         """
@@ -292,6 +304,93 @@ class DataProcessor:
         pivot = df.groupby(['pseudo', 'composant']).size().unstack(fill_value=0)
         pivot.columns = [f"comp_{col}" for col in pivot.columns]
         return pivot.reset_index()
+
+    def merge_logs_notes(self, logs_df, notes_df):
+        """
+        Fusionne les métriques d'activité par étudiant avec les notes.
+
+        Effectue une jointure externe (outer merge) sur 'pseudo' pour conserver
+        tous les étudiants, y compris ceux présents uniquement dans les logs
+        ou uniquement dans les notes.
+
+        Args:
+            logs_df (pd.DataFrame): DataFrame de métriques d'activité par étudiant
+                (sortie de compute_activity_metrics ou compute_component_features).
+            notes_df (pd.DataFrame): DataFrame de notes nettoyé avec colonnes 'pseudo' et 'note'.
+
+        Returns:
+            pd.DataFrame: DataFrame fusionné avec une ligne par étudiant.
+        """
+        # Compute activity metrics and component features
+        activity = self.compute_activity_metrics(logs_df)
+        components = self.compute_component_features(logs_df)
+
+        # Merge activity and component features
+        student_features = activity.merge(components, on='pseudo', how='outer')
+
+        # Merge with notes
+        logs_students = set(student_features['pseudo'].unique())
+        notes_students = set(notes_df['pseudo'].unique())
+
+        self._cleaning_report['students_logs_only'] = len(logs_students - notes_students)
+        self._cleaning_report['students_notes_only'] = len(notes_students - logs_students)
+
+        merged = student_features.merge(notes_df[['pseudo', 'note']], on='pseudo', how='outer')
+        self._cleaning_report['students_merged'] = len(merged)
+
+        return merged.reset_index(drop=True)
+
+    def build_student_dataset(self, logs_df, notes_df):
+        """
+        Orchestre la construction complète du dataset étudiant pour le ML.
+
+        Appelle séquentiellement :
+        1. clean_logs pour nettoyer les logs
+        2. clean_notes pour nettoyer les notes
+        3. extract_temporal_features pour enrichir les logs
+        4. merge_logs_notes pour fusionner métriques et notes
+
+        Args:
+            logs_df (pd.DataFrame): DataFrame de logs brut.
+            notes_df (pd.DataFrame): DataFrame de notes brut.
+
+        Returns:
+            pd.DataFrame: DataFrame final au niveau étudiant, prêt pour le ML.
+        """
+        # Track initial counts
+        self._cleaning_report['logs_initial_rows'] = len(logs_df)
+        self._cleaning_report['notes_initial_rows'] = len(notes_df)
+
+        # Clean
+        logs_clean = self.clean_logs(logs_df)
+        notes_clean = self.clean_notes(notes_df)
+
+        self._cleaning_report['logs_duplicates_removed'] = (
+            len(logs_df) - len(logs_clean)
+        )
+
+        # Extract temporal features
+        logs_enriched = self.extract_temporal_features(logs_clean)
+
+        # Merge into student-level dataset
+        result = self.merge_logs_notes(logs_enriched, notes_clean)
+
+        return result
+
+    def get_cleaning_report(self):
+        """
+        Retourne un rapport sur les opérations de nettoyage effectuées.
+
+        Returns:
+            dict: Statistiques de nettoyage incluant :
+                - logs_initial_rows: nombre initial de lignes de logs
+                - logs_duplicates_removed: nombre de doublons supprimés
+                - notes_initial_rows: nombre initial de lignes de notes
+                - students_logs_only: étudiants présents uniquement dans les logs
+                - students_notes_only: étudiants présents uniquement dans les notes
+                - students_merged: nombre total d'étudiants dans le dataset final
+        """
+        return dict(self._cleaning_report)
 
     def process_data(self, data):
         """
