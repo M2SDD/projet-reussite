@@ -57,7 +57,7 @@ class DataLoader:
             file_path (str): Path to the logs_info_25_pseudo.csv file
 
         Returns:
-            pd.DataFrame: DataFrame containing the logs data
+            pd.DataFrame: DataFrame containing the logs data with parsed datetime
 
         Raises:
             ValueError: If required columns are missing
@@ -67,6 +67,18 @@ class DataLoader:
 
         # Validate required columns
         self._validate_columns(df, self.LOGS_REQUIRED_COLUMNS, 'logs file')
+
+        # Parse the 'heure' column to datetime with nanosecond resolution
+        df['heure'] = pd.to_datetime(df['heure'], format='%Y-%m-%d %H:%M:%S', errors='coerce').astype('datetime64[ns]')
+
+        # Check for any invalid datetime values that were coerced to NaT
+        invalid_count = df['heure'].isna().sum()
+        if invalid_count > 0:
+            warnings.warn(
+                f"Found {invalid_count} invalid datetime values in 'heure' column. "
+                f"These have been set to NaT (Not a Time).",
+                UserWarning
+            )
 
         return df
 
