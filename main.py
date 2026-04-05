@@ -49,12 +49,19 @@ if __name__ == '__main__':
     print(f"✓ DataLoader: {type(data_loader).__name__}")
     print(f"✓ DataProcessor: {type(data_processor).__name__}")
     print(f"✓ Visualizer: {type(visualizer).__name__}")
-    # Initialize DataLoader
-    loader = DataLoader()
+    print()
+
 
     # --------------------------------------------------------------------------
     # Data Loading
     # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Data Loading")
+    print("=" * 60)
+    print()
+
+    # Initialize DataLoader
+    loader = DataLoader()
 
     # Load logs data
     print("Loading ARCHE logs data...")
