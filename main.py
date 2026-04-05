@@ -52,6 +52,10 @@ if __name__ == '__main__':
     # Initialize DataLoader
     loader = DataLoader()
 
+    # --------------------------------------------------------------------------
+    # Data Loading
+    # --------------------------------------------------------------------------
+
     # Load logs data
     print("Loading ARCHE logs data...")
     logs_df = loader.load_logs(LOGS_FILE)
