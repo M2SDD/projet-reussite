@@ -6,7 +6,7 @@
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-DataVis sur les exports d'Arche anonymisés
+Module de configuration pour l'application de visualisation de données
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,30 +20,18 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from src import Config, DataLoader, DataProcessor, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constantes
+# Classe Config
 # ----------------------------------------------------------------------------------------------------------------------
-# les constantes par défaut sont définies dans les src.*
+class Config:
+    """
+    Classe de configuration pour centraliser les paramètres de l'application
+    """
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    # Initialisation de la configuration
-    config = Config()
-
-    # Initialisation des composants principaux
-    data_loader = DataLoader()
-    data_processor = DataProcessor()
-    visualizer = Visualizer()
-
-    # Vérification de l'architecture OOP
-    print("✓ Tous les modules sont chargés avec succès")
-    print(f"✓ Config: {type(config).__name__}")
-    print(f"✓ DataLoader: {type(data_loader).__name__}")
-    print(f"✓ DataProcessor: {type(data_processor).__name__}")
-    print(f"✓ Visualizer: {type(visualizer).__name__}")
+    def __init__(self):
+        """
+        Initialise la configuration avec les paramètres par défaut
+        """
+        pass

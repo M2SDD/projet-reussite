@@ -6,7 +6,7 @@
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-DataVis sur les exports d'Arche anonymisés
+Module de chargement des données depuis les fichiers CSV d'exports Arche
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,30 +20,30 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from src import Config, DataLoader, DataProcessor, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constantes
+# Classe DataLoader
 # ----------------------------------------------------------------------------------------------------------------------
-# les constantes par défaut sont définies dans les src.*
+class DataLoader:
+    """
+    Classe responsable du chargement et de la lecture des données depuis les fichiers sources
+    """
 
+    def __init__(self):
+        """
+        Initialise le chargeur de données
+        """
+        pass
 
-# ----------------------------------------------------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    # Initialisation de la configuration
-    config = Config()
+    def load_data(self, file_path):
+        """
+        Charge les données depuis un fichier CSV
 
-    # Initialisation des composants principaux
-    data_loader = DataLoader()
-    data_processor = DataProcessor()
-    visualizer = Visualizer()
+        Args:
+            file_path (str): Chemin vers le fichier de données
 
-    # Vérification de l'architecture OOP
-    print("✓ Tous les modules sont chargés avec succès")
-    print(f"✓ Config: {type(config).__name__}")
-    print(f"✓ DataLoader: {type(data_loader).__name__}")
-    print(f"✓ DataProcessor: {type(data_processor).__name__}")
-    print(f"✓ Visualizer: {type(visualizer).__name__}")
+        Returns:
+            DataFrame: Les données chargées
+        """
+        pass

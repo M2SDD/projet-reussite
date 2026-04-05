@@ -6,7 +6,7 @@
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-DataVis sur les exports d'Arche anonymisés
+Module de visualisation des données analysées
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,30 +20,30 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from src import Config, DataLoader, DataProcessor, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constantes
+# Classe Visualizer
 # ----------------------------------------------------------------------------------------------------------------------
-# les constantes par défaut sont définies dans les src.*
+class Visualizer:
+    """
+    Classe responsable de la création de visualisations et graphiques
+    """
 
+    def __init__(self):
+        """
+        Initialise le générateur de visualisations
+        """
+        pass
 
-# ----------------------------------------------------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    # Initialisation de la configuration
-    config = Config()
+    def create_visualization(self, data):
+        """
+        Crée une visualisation à partir des données
 
-    # Initialisation des composants principaux
-    data_loader = DataLoader()
-    data_processor = DataProcessor()
-    visualizer = Visualizer()
+        Args:
+            data (DataFrame): Les données à visualiser
 
-    # Vérification de l'architecture OOP
-    print("✓ Tous les modules sont chargés avec succès")
-    print(f"✓ Config: {type(config).__name__}")
-    print(f"✓ DataLoader: {type(data_loader).__name__}")
-    print(f"✓ DataProcessor: {type(data_processor).__name__}")
-    print(f"✓ Visualizer: {type(visualizer).__name__}")
+        Returns:
+            Figure: La figure matplotlib générée
+        """
+        pass

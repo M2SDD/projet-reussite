@@ -6,7 +6,7 @@
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-DataVis sur les exports d'Arche anonymisés
+Module de traitement et d'analyse des données chargées
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,30 +20,30 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from src import Config, DataLoader, DataProcessor, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Constantes
+# Classe DataProcessor
 # ----------------------------------------------------------------------------------------------------------------------
-# les constantes par défaut sont définies dans les src.*
+class DataProcessor:
+    """
+    Classe responsable du traitement, de l'analyse et de la transformation des données
+    """
 
+    def __init__(self):
+        """
+        Initialise le processeur de données
+        """
+        pass
 
-# ----------------------------------------------------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    # Initialisation de la configuration
-    config = Config()
+    def process_data(self, data):
+        """
+        Traite et transforme les données brutes
 
-    # Initialisation des composants principaux
-    data_loader = DataLoader()
-    data_processor = DataProcessor()
-    visualizer = Visualizer()
+        Args:
+            data (DataFrame): Les données à traiter
 
-    # Vérification de l'architecture OOP
-    print("✓ Tous les modules sont chargés avec succès")
-    print(f"✓ Config: {type(config).__name__}")
-    print(f"✓ DataLoader: {type(data_loader).__name__}")
-    print(f"✓ DataProcessor: {type(data_processor).__name__}")
-    print(f"✓ Visualizer: {type(visualizer).__name__}")
+        Returns:
+            DataFrame: Les données traitées
+        """
+        pass
