@@ -76,3 +76,29 @@ if __name__ == '__main__':
     print()
     print("Sample notes:")
     print(notes_df.head(3))
+    print()
+
+    # --------------------------------------------------------------------------
+    # Data Cleaning & Preprocessing Pipeline
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Data Cleaning & Preprocessing Pipeline")
+    print("=" * 60)
+    print()
+
+    # Build the full student dataset
+    processor = DataProcessor(config=config)
+    student_df = processor.build_student_dataset(logs_df, notes_df)
+
+    # Display cleaning report
+    report = processor.get_cleaning_report()
+    print("Cleaning Report:")
+    for key, value in report.items():
+        print(f"  - {key}: {value}")
+    print()
+
+    # Display final student dataset
+    print(f"Final student dataset shape: {student_df.shape}")
+    print()
+    print("Sample student data:")
+    print(student_df.head(5))
