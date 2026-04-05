@@ -220,6 +220,79 @@ class DataProcessor:
 
         return report
 
+    def extract_temporal_features(self, df):
+        """
+        Extrait des caractéristiques temporelles à partir de la colonne 'heure'.
+
+        Crée les colonnes : heure_hour, day_of_week, month, is_weekend.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec une colonne 'heure' datetime.
+
+        Returns:
+            pd.DataFrame: Le DataFrame enrichi des caractéristiques temporelles.
+        """
+        df = df.copy()
+        df['heure'] = pd.to_datetime(df['heure'], errors='coerce')
+        df['heure_hour'] = df['heure'].dt.hour
+        df['day_of_week'] = df['heure'].dt.dayofweek
+        df['month'] = df['heure'].dt.month
+        df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
+        return df
+
+    def compute_activity_metrics(self, df):
+        """
+        Calcule des métriques d'activité par étudiant.
+
+        Métriques calculées : total_actions, unique_days_active, actions_per_day, session_count.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo' et 'heure'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et les métriques d'activité.
+        """
+        df = df.copy()
+        df['heure'] = pd.to_datetime(df['heure'], errors='coerce')
+        df['date'] = df['heure'].dt.date
+
+        grouped = df.groupby('pseudo')
+
+        metrics = pd.DataFrame({
+            'total_actions': grouped.size(),
+            'unique_days_active': grouped['date'].nunique(),
+        })
+
+        metrics['actions_per_day'] = (
+            metrics['total_actions'] / metrics['unique_days_active']
+        ).round(2)
+
+        # Session count: count distinct periods separated by > 30 min gap
+        def count_sessions(group):
+            times = group['heure'].dropna().sort_values()
+            if len(times) <= 1:
+                return 1
+            gaps = times.diff() > pd.Timedelta(minutes=30)
+            return int(gaps.sum()) + 1
+
+        metrics['session_count'] = grouped.apply(count_sessions)
+
+        return metrics.reset_index()
+
+    def compute_component_features(self, df):
+        """
+        Crée des colonnes comptant les actions par composant pour chaque étudiant.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo' et 'composant'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et une colonne par composant.
+        """
+        pivot = df.groupby(['pseudo', 'composant']).size().unstack(fill_value=0)
+        pivot.columns = [f"comp_{col}" for col in pivot.columns]
+        return pivot.reset_index()
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
