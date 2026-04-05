@@ -30,8 +30,62 @@ class Config:
     Classe de configuration pour centraliser les paramètres de l'application
     """
 
+    # Note range validation bounds (French grading system)
+    NOTE_MIN = 0
+    NOTE_MAX = 20
+
+    # Datetime format for parsing log timestamps
+    DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+    # Duplicate removal settings
+    DUPLICATE_KEEP = 'first'
+    DUPLICATE_SUBSET = None  # None means all columns
+
+    # Column name mappings (raw CSV -> internal names)
+    LOGS_COLUMN_MAPPING = {
+        'heure': 'heure',
+        'pseudo': 'pseudo',
+        'contexte': 'contexte',
+        'composant': 'composant',
+        'evenement': 'evenement',
+    }
+
+    NOTES_COLUMN_MAPPING = {
+        'pseudo': 'pseudo',
+        'note': 'note',
+    }
+
+    # Feature engineering toggles
+    FEATURE_HOUR_OF_DAY = True
+    FEATURE_DAY_OF_WEEK = True
+    FEATURE_SESSION_COUNT = True
+    FEATURE_TOTAL_EVENTS = True
+
+    # Composant category mappings
+    COMPOSANT_CATEGORIES = {
+        'Système': 'system',
+        'Devoir': 'assignment',
+        'Fichier': 'file',
+        'Forum': 'forum',
+        'Dossier': 'folder',
+        'URL': 'url',
+        'Page': 'page',
+        'Cours': 'course',
+    }
+
+    # Evenement category mappings
+    EVENEMENT_CATEGORIES = {
+        'Cours consulté': 'view',
+        'Module de cours consulté': 'view',
+        'Activité de devoir consultée': 'view',
+        'Un fichier a été déposé.': 'submit',
+        'Une tentative a été soumise.': 'submit',
+        'Discussion consultée': 'forum',
+        'Message créé': 'forum',
+    }
+
     def __init__(self):
         """
-        Initialise la configuration avec les paramètres par défaut
+        Initialise la configuration avec les paramètres par défaut.
         """
         pass
