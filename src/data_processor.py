@@ -919,6 +919,61 @@ class DataProcessor:
 
         return stats_transposed
 
+    def select_by_variance(self, df, threshold=0.0):
+        """
+        Sélectionne les features dont la variance dépasse un seuil donné.
+
+        Cette méthode de sélection de features élimine les colonnes avec une variance
+        faible, qui contiennent peu d'information utile pour la prédiction.
+        Une variance faible indique que les valeurs d'une feature varient peu,
+        ce qui la rend moins discriminante.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à filtrer.
+            threshold (float): Le seuil minimal de variance. Les colonnes avec une variance
+                strictement inférieure à ce seuil seront éliminées. Par défaut 0.0
+                (élimine uniquement les features constantes).
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les colonnes dont la variance
+                est supérieure ou égale au seuil. Les colonnes non numériques sont
+                préservées dans le résultat.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select numeric and non-numeric columns separately
+        numeric_df = df.select_dtypes(include=['number'])
+        non_numeric_df = df.select_dtypes(exclude=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute variance for each numeric column
+        variances = numeric_df.var()
+
+        # Select columns with variance >= threshold
+        selected_columns = variances[variances >= threshold].index.tolist()
+        removed_count = len(numeric_df.columns) - len(selected_columns)
+
+        if removed_count > 0:
+            removed_cols = [col for col in numeric_df.columns if col not in selected_columns]
+            warnings.warn(
+                f"{removed_count} colonnes avec variance < {threshold} ont été supprimées: {removed_cols}",
+                UserWarning,
+            )
+
+        # Filter numeric columns and combine with non-numeric columns
+        filtered_numeric = numeric_df[selected_columns]
+
+        # Combine non-numeric columns with filtered numeric columns
+        if len(non_numeric_df.columns) > 0:
+            result = pd.concat([non_numeric_df, filtered_numeric], axis=1)
+        else:
+            result = filtered_numeric
+
+        return result
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
