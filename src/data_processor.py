@@ -486,6 +486,75 @@ class DataProcessor:
 
         return metrics.reset_index()
 
+    def compute_temporal_patterns(self, df):
+        """
+        Calcule des patterns temporels d'engagement pour chaque étudiant.
+
+        Métriques calculées :
+        - peak_hour: heure de la journée avec le plus d'activité
+        - morning_activity: proportion d'activité le matin (6h-12h)
+        - afternoon_activity: proportion d'activité l'après-midi (12h-18h)
+        - evening_activity: proportion d'activité le soir (18h-24h)
+        - night_activity: proportion d'activité la nuit (0h-6h)
+        - weekend_activity_ratio: proportion d'activité pendant le week-end
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo' et 'heure'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et les patterns temporels.
+        """
+        df = df.copy()
+        df['heure'] = pd.to_datetime(df['heure'], errors='coerce')
+        df['hour'] = df['heure'].dt.hour
+        df['day_of_week'] = df['heure'].dt.dayofweek
+
+        grouped = df.groupby('pseudo')
+
+        # Calculate peak hour (most active hour)
+        def get_peak_hour(group):
+            if len(group) == 0:
+                return 0
+            hour_counts = group['hour'].value_counts()
+            return int(hour_counts.idxmax()) if len(hour_counts) > 0 else 0
+
+        metrics = pd.DataFrame({
+            'peak_hour': grouped.apply(get_peak_hour)
+        })
+
+        # Calculate time period activity ratios
+        def calc_time_periods(group):
+            if len(group) == 0:
+                return pd.Series([0.0, 0.0, 0.0, 0.0])
+
+            total = len(group)
+            morning = ((group['hour'] >= 6) & (group['hour'] < 12)).sum()
+            afternoon = ((group['hour'] >= 12) & (group['hour'] < 18)).sum()
+            evening = ((group['hour'] >= 18) & (group['hour'] < 24)).sum()
+            night = (group['hour'] < 6).sum()
+
+            return pd.Series([
+                round(morning / total, 2),
+                round(afternoon / total, 2),
+                round(evening / total, 2),
+                round(night / total, 2)
+            ])
+
+        metrics[['morning_activity', 'afternoon_activity', 'evening_activity', 'night_activity']] = grouped.apply(
+            calc_time_periods
+        )
+
+        # Calculate weekend activity ratio
+        def calc_weekend_ratio(group):
+            if len(group) == 0:
+                return 0.0
+            weekend_count = group['day_of_week'].isin([5, 6]).sum()
+            return round(weekend_count / len(group), 2)
+
+        metrics['weekend_activity_ratio'] = grouped.apply(calc_weekend_ratio)
+
+        return metrics.reset_index()
+
     def merge_logs_notes(self, logs_df, notes_df):
         """
         Fusionne les métriques d'activité par étudiant avec les notes.
