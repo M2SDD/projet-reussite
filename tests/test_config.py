@@ -42,6 +42,34 @@ def test_default_initialization():
     assert config.PLOT_DPI == 300
 
 
+def test_load_json_config():
+    """Test loading configuration from JSON file."""
+    config_data = {
+        'PLOT_DPI': 600,
+        'TRAIN_TEST_SPLIT_RATIO': 0.7,
+        'CV_FOLDS': 10
+    }
+    f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+    json.dump(config_data, f)
+    f.close()
+
+    try:
+        config = Config(config_file=f.name)
+
+        # Verify that values from JSON file override defaults
+        assert config.PLOT_DPI == 600
+        assert config.TRAIN_TEST_SPLIT_RATIO == 0.7
+        assert config.CV_FOLDS == 10
+
+        # Verify that non-overridden values remain at defaults
+        assert config.RANDOM_STATE == 42
+        assert config.OUTPUT_DIR == 'output'
+    finally:
+        # Cleanup
+        if os.path.exists(f.name):
+            os.unlink(f.name)
+
+
 @pytest.fixture
 def config():
     """Create a Config instance with default settings for testing."""
