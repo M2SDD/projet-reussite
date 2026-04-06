@@ -590,6 +590,42 @@ class DataProcessor:
 
         return merged.reset_index(drop=True)
 
+    def build_engagement_features(self, logs_df):
+        """
+        Orchestre la construction complète des features d'engagement étudiant.
+
+        Appelle séquentiellement toutes les méthodes de calcul de features :
+        1. compute_activity_metrics pour les métriques d'activité de base
+        2. compute_component_features pour les features par composant
+        3. compute_event_type_features pour les features par type d'événement
+        4. compute_consistency_features pour les métriques de régularité
+        5. compute_interaction_depth_features pour la profondeur d'engagement
+        6. compute_temporal_patterns pour les patterns temporels
+
+        Args:
+            logs_df (pd.DataFrame): DataFrame de logs avec colonnes 'pseudo', 'heure', 'composant', 'contexte', 'evenement'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et toutes les features d'engagement.
+        """
+        # Compute all feature sets
+        activity = self.compute_activity_metrics(logs_df)
+        components = self.compute_component_features(logs_df)
+        event_types = self.compute_event_type_features(logs_df)
+        consistency = self.compute_consistency_features(logs_df)
+        interaction_depth = self.compute_interaction_depth_features(logs_df)
+        temporal = self.compute_temporal_patterns(logs_df)
+
+        # Merge all features on 'pseudo'
+        result = activity
+        result = result.merge(components, on='pseudo', how='outer')
+        result = result.merge(event_types, on='pseudo', how='outer')
+        result = result.merge(consistency, on='pseudo', how='outer')
+        result = result.merge(interaction_depth, on='pseudo', how='outer')
+        result = result.merge(temporal, on='pseudo', how='outer')
+
+        return result.reset_index(drop=True)
+
     def build_student_dataset(self, logs_df, notes_df):
         """
         Orchestre la construction complète du dataset étudiant pour le ML.
