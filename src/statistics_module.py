@@ -47,6 +47,69 @@ class StatisticsModule:
         """
         self.config = config if config is not None else Config()
 
+    def compute_data_summary(self, df):
+        """
+        Calcule les métadonnées et informations générales sur le dataset.
+
+        Retourne des informations structurelles sur le DataFrame :
+        - Dimensions (nombre de lignes, colonnes)
+        - Types de données et leur répartition
+        - Valeurs manquantes
+        - Utilisation mémoire
+        - Plage de dates (si colonnes datetime présentes)
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à analyser.
+
+        Returns:
+            dict: Dictionnaire contenant les métadonnées du dataset.
+                  Structure : {
+                      'total_rows': int,
+                      'total_columns': int,
+                      'column_types': dict,
+                      'missing_values': dict,
+                      'memory_usage_mb': float,
+                      'date_range': dict (optionnel)
+                  }
+        """
+        summary = {
+            'total_rows': len(df),
+            'total_columns': len(df.columns),
+        }
+
+        # Analyser les types de données
+        type_counts = df.dtypes.value_counts().to_dict()
+        summary['column_types'] = {str(k): int(v) for k, v in type_counts.items()}
+
+        # Analyser les valeurs manquantes
+        missing_total = df.isna().sum().sum()
+        missing_by_column = df.isna().sum().to_dict()
+        summary['missing_values'] = {
+            'total': int(missing_total),
+            'by_column': missing_by_column,
+        }
+
+        # Calculer l'utilisation mémoire
+        memory_bytes = df.memory_usage(deep=True).sum()
+        summary['memory_usage_mb'] = round(memory_bytes / (1024 * 1024), 2)
+
+        # Analyser les colonnes datetime pour obtenir la plage de dates
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns
+        if len(datetime_cols) > 0:
+            date_ranges = {}
+            for col in datetime_cols:
+                non_null_dates = df[col].dropna()
+                if len(non_null_dates) > 0:
+                    date_ranges[col] = {
+                        'min': non_null_dates.min(),
+                        'max': non_null_dates.max(),
+                        'range_days': (non_null_dates.max() - non_null_dates.min()).days,
+                    }
+            if date_ranges:
+                summary['date_range'] = date_ranges
+
+        return summary
+
     def calculate_basic_stats(self, data):
         """
         Calcule les statistiques descriptives de base.
