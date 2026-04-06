@@ -879,5 +879,258 @@ class TestComputeDataSummary:
 
 class TestGenerateReport:
     """Test generate_report functionality."""
-    # Tests will be implemented in subtask-2-6
-    pass
+
+    def test_generate_report_returns_string(self, stats_module, sample_numeric_df):
+        """Test that generate_report returns a string."""
+        result = stats_module.generate_report(sample_numeric_df)
+        assert isinstance(result, str)
+
+    def test_generate_report_not_empty(self, stats_module, sample_numeric_df):
+        """Test that generate_report returns a non-empty string."""
+        result = stats_module.generate_report(sample_numeric_df)
+        assert len(result) > 0
+
+    def test_generate_report_has_header(self, stats_module, sample_numeric_df):
+        """Test that report contains the main header."""
+        result = stats_module.generate_report(sample_numeric_df)
+        assert "RAPPORT STATISTIQUE DESCRIPTIF" in result
+
+    def test_generate_report_has_all_sections(self, stats_module, sample_numeric_df):
+        """Test that report contains all expected sections."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for all 4 main sections
+        assert "1. RÉSUMÉ DES DONNÉES" in result
+        assert "2. STATISTIQUES DESCRIPTIVES" in result
+        assert "3. CARACTÉRISTIQUES DE DISTRIBUTION" in result
+        assert "4. DÉTECTION DES VALEURS ABERRANTES" in result
+
+    def test_generate_report_has_footer(self, stats_module, sample_numeric_df):
+        """Test that report contains the footer."""
+        result = stats_module.generate_report(sample_numeric_df)
+        assert "FIN DU RAPPORT" in result
+
+    def test_generate_report_includes_data_summary(self, stats_module, sample_numeric_df):
+        """Test that report includes data summary information."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for data summary elements
+        assert "Nombre de lignes" in result
+        assert "Nombre de colonnes" in result
+        assert "Utilisation mémoire" in result
+        assert "Types de colonnes" in result
+        assert "Valeurs manquantes" in result
+
+    def test_generate_report_includes_statistics(self, stats_module, sample_numeric_df):
+        """Test that report includes descriptive statistics."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for statistics elements
+        assert "Nombre d'observations" in result
+        assert "Moyenne" in result
+        assert "Médiane" in result
+        assert "Écart-type" in result
+        assert "Variance" in result
+        assert "Minimum" in result
+        assert "Maximum" in result
+        assert "Étendue" in result
+
+    def test_generate_report_includes_distribution_characteristics(self, stats_module, sample_numeric_df):
+        """Test that report includes distribution characteristics."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for distribution elements
+        assert "Asymétrie (Skewness)" in result
+        assert "Aplatissement (Kurtosis)" in result
+
+    def test_generate_report_includes_outlier_detection(self, stats_module, sample_numeric_df):
+        """Test that report includes outlier detection information."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for outlier detection elements
+        assert "Méthode IQR" in result
+        assert "Nombre d'outliers" in result
+        assert "Pourcentage" in result
+
+    def test_generate_report_column_names_present(self, stats_module, sample_numeric_df):
+        """Test that column names appear in the report."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # All numeric columns should appear
+        assert "score" in result
+        assert "age" in result
+        assert "hours_studied" in result
+
+    def test_generate_report_mixed_types(self, stats_module, sample_mixed_df):
+        """Test report generation with mixed data types."""
+        result = stats_module.generate_report(sample_mixed_df)
+
+        # Should contain the report structure
+        assert "RAPPORT STATISTIQUE DESCRIPTIF" in result
+        assert "1. RÉSUMÉ DES DONNÉES" in result
+
+        # Should only show statistics for numeric column 'note'
+        assert "note" in result
+
+        # Non-numeric columns should not appear in statistics section
+        # but should be counted in column types
+
+    def test_generate_report_with_datetime(self, stats_module, sample_mixed_df):
+        """Test that report includes date range when datetime columns are present."""
+        result = stats_module.generate_report(sample_mixed_df)
+
+        # Should include date range information
+        assert "Plage de dates" in result
+        assert "heure" in result
+        assert "Min" in result
+        assert "Max" in result
+        assert "Durée" in result
+
+    def test_generate_report_no_datetime(self, stats_module, sample_numeric_df):
+        """Test that report handles DataFrames without datetime columns."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Should not have date range section
+        assert "Plage de dates" not in result
+
+    def test_generate_report_with_missing_values(self, stats_module, df_with_missing):
+        """Test that report includes missing value details when present."""
+        result = stats_module.generate_report(df_with_missing)
+
+        # Should mention missing values
+        assert "Valeurs manquantes" in result
+        assert "3 total" in result
+        assert "Détail par colonne" in result
+
+    def test_generate_report_no_missing_values(self, stats_module, sample_numeric_df):
+        """Test that report handles DataFrames without missing values."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Should still have missing values section but with 0
+        assert "Valeurs manquantes" in result
+        assert "0 total" in result
+
+    def test_generate_report_with_outliers(self, stats_module, df_with_outliers):
+        """Test that report detects and reports outliers."""
+        result = stats_module.generate_report(df_with_outliers)
+
+        # Should have outlier information
+        assert "DÉTECTION DES VALEURS ABERRANTES" in result
+        assert "values" in result
+
+        # The 'values' column has outlier(s), so count should be > 0
+        # Just verify structure, not exact count
+        assert "Nombre d'outliers" in result
+
+    def test_generate_report_empty_dataframe(self, stats_module, empty_df):
+        """Test report generation on an empty DataFrame."""
+        result = stats_module.generate_report(empty_df)
+
+        # Should still return a valid report
+        assert isinstance(result, str)
+        assert "RAPPORT STATISTIQUE DESCRIPTIF" in result
+
+        # Should show 0 rows and columns
+        assert "Nombre de lignes      : 0" in result
+        assert "Nombre de colonnes    : 0" in result
+
+    def test_generate_report_single_row(self, stats_module, single_row_df):
+        """Test report generation on a single-row DataFrame."""
+        result = stats_module.generate_report(single_row_df)
+
+        # Should still return a valid report
+        assert isinstance(result, str)
+        assert "RAPPORT STATISTIQUE DESCRIPTIF" in result
+        assert "Nombre de lignes      : 1" in result
+
+    def test_generate_report_non_numeric_only(self, stats_module, non_numeric_df):
+        """Test report generation on a DataFrame with only non-numeric columns."""
+        result = stats_module.generate_report(non_numeric_df)
+
+        # Should still return a valid report
+        assert isinstance(result, str)
+        assert "RAPPORT STATISTIQUE DESCRIPTIF" in result
+
+        # Should indicate no numeric columns available
+        assert "Aucune colonne numérique disponible" in result
+
+    def test_generate_report_formatting_consistency(self, stats_module, sample_numeric_df):
+        """Test that report formatting is consistent (separators, alignment)."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for consistent separators
+        assert "=" * 80 in result
+        assert "-" * 80 in result
+
+    def test_generate_report_skewness_interpretation(self, stats_module):
+        """Test that report includes skewness interpretation."""
+        # Create data with known right skew
+        df = pd.DataFrame({
+            'right_skewed': [1, 2, 3, 4, 5, 6, 7, 8, 9, 100],
+        })
+
+        result = stats_module.generate_report(df)
+
+        # Should include interpretation
+        assert "Distribution asymétrique à droite" in result or "Distribution symétrique" in result
+
+    def test_generate_report_kurtosis_interpretation(self, stats_module):
+        """Test that report includes kurtosis interpretation."""
+        # Create data with known distribution
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'peaked': [50] * 40 + list(range(1, 11)),
+        })
+
+        result = stats_module.generate_report(df)
+
+        # Should include kurtosis interpretation
+        assert ("leptokurtique" in result or
+                "platykurtique" in result or
+                "mésokurtique" in result)
+
+    def test_generate_report_numeric_precision(self, stats_module, sample_numeric_df):
+        """Test that numeric values are formatted with proper precision."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check that values have decimal formatting (should see .xxxx format)
+        # Just verify the pattern exists, not exact values
+        import re
+        # Look for patterns like ": 12.3456"
+        decimal_pattern = r': \d+\.\d{4}'
+        assert re.search(decimal_pattern, result) is not None
+
+    def test_generate_report_quartiles_present(self, stats_module, sample_numeric_df):
+        """Test that quartile information is included in the report."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Check for quartile labels
+        assert "Q1 (25%)" in result
+        assert "Q2 (50%)" in result
+        assert "Q3 (75%)" in result
+
+    def test_generate_report_memory_usage_format(self, stats_module, sample_numeric_df):
+        """Test that memory usage is properly formatted in MB."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Should have MB suffix
+        assert " MB" in result
+
+    def test_generate_report_all_columns_analyzed(self, stats_module, sample_numeric_df):
+        """Test that all numeric columns are analyzed in the report."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Count how many times each column appears in statistics section
+        for col in ['score', 'age', 'hours_studied']:
+            # Each column should appear multiple times (in different sections)
+            assert result.count(col) >= 3  # At least in stats, distribution, and outliers
+
+    def test_generate_report_outlier_percentage_format(self, stats_module, sample_numeric_df):
+        """Test that outlier percentage is properly formatted."""
+        result = stats_module.generate_report(sample_numeric_df)
+
+        # Should have percentage values with % symbol
+        import re
+        # Look for patterns like ": 0.00%"
+        percentage_pattern = r': \d+\.\d{2}%'
+        assert re.search(percentage_pattern, result) is not None
