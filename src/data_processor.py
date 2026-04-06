@@ -305,6 +305,57 @@ class DataProcessor:
         pivot.columns = [f"comp_{col}" for col in pivot.columns]
         return pivot.reset_index()
 
+    def compute_event_type_features(self, df):
+        """
+        Calcule des métriques basées sur les types d'événements pour chaque étudiant.
+
+        Catégorise les événements en types (consultation, soumission, forum, etc.)
+        et compte le nombre d'événements de chaque type par étudiant.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo' et 'evenement'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et une colonne par type d'événement.
+        """
+        df = df.copy()
+
+        # Define event type mappings
+        def categorize_event(event):
+            """Catégorise un événement selon son type."""
+            if pd.isna(event):
+                return 'other'
+            event_lower = event.lower()
+
+            # View/consultation events
+            if any(keyword in event_lower for keyword in ['consulté', 'vue', 'affich', 'viewed', 'view']):
+                return 'view'
+            # Submission events
+            elif any(keyword in event_lower for keyword in ['déposé', 'soumis', 'submit', 'upload', 'envoyé']):
+                return 'submission'
+            # Forum events
+            elif any(keyword in event_lower for keyword in ['forum', 'discussion', 'message', 'post']):
+                return 'forum'
+            # Quiz/test events
+            elif any(keyword in event_lower for keyword in ['test', 'quiz', 'tentative', 'attempt']):
+                return 'quiz'
+            # Download events
+            elif any(keyword in event_lower for keyword in ['télécharg', 'download']):
+                return 'download'
+            else:
+                return 'other'
+
+        # Apply categorization
+        df['event_type'] = df['evenement'].apply(categorize_event)
+
+        # Count events by type for each student
+        pivot = df.groupby(['pseudo', 'event_type']).size().unstack(fill_value=0)
+
+        # Rename columns with descriptive names
+        pivot.columns = [f"{col}_count" for col in pivot.columns]
+
+        return pivot.reset_index()
+
     def merge_logs_notes(self, logs_df, notes_df):
         """
         Fusionne les métriques d'activité par étudiant avec les notes.
