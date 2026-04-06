@@ -174,7 +174,180 @@ class Config:
 
         Raises:
             ValueError: Si un paramètre est invalide, avec un message descriptif
+            TypeError: Si un paramètre n'a pas le type attendu
         """
+        # Type checking for numeric parameters
+        if not isinstance(self.TRAIN_TEST_SPLIT_RATIO, (int, float)):
+            raise TypeError(
+                f"TRAIN_TEST_SPLIT_RATIO doit être un nombre (int ou float), "
+                f"reçu: {type(self.TRAIN_TEST_SPLIT_RATIO).__name__}"
+            )
+
+        if not isinstance(self.CV_FOLDS, int):
+            raise TypeError(
+                f"CV_FOLDS doit être un entier (int), "
+                f"reçu: {type(self.CV_FOLDS).__name__}"
+            )
+
+        if not isinstance(self.RANDOM_STATE, int):
+            raise TypeError(
+                f"RANDOM_STATE doit être un entier (int), "
+                f"reçu: {type(self.RANDOM_STATE).__name__}"
+            )
+
+        if not isinstance(self.NOTE_MIN, (int, float)):
+            raise TypeError(
+                f"NOTE_MIN doit être un nombre (int ou float), "
+                f"reçu: {type(self.NOTE_MIN).__name__}"
+            )
+
+        if not isinstance(self.NOTE_MAX, (int, float)):
+            raise TypeError(
+                f"NOTE_MAX doit être un nombre (int ou float), "
+                f"reçu: {type(self.NOTE_MAX).__name__}"
+            )
+
+        if not isinstance(self.RISK_THRESHOLD_HIGH, (int, float)):
+            raise TypeError(
+                f"RISK_THRESHOLD_HIGH doit être un nombre (int ou float), "
+                f"reçu: {type(self.RISK_THRESHOLD_HIGH).__name__}"
+            )
+
+        if not isinstance(self.RISK_THRESHOLD_MEDIUM, (int, float)):
+            raise TypeError(
+                f"RISK_THRESHOLD_MEDIUM doit être un nombre (int ou float), "
+                f"reçu: {type(self.RISK_THRESHOLD_MEDIUM).__name__}"
+            )
+
+        if not isinstance(self.PLOT_DPI, int):
+            raise TypeError(
+                f"PLOT_DPI doit être un entier (int), "
+                f"reçu: {type(self.PLOT_DPI).__name__}"
+            )
+
+        if not isinstance(self.PLOT_FONT_SIZE, int):
+            raise TypeError(
+                f"PLOT_FONT_SIZE doit être un entier (int), "
+                f"reçu: {type(self.PLOT_FONT_SIZE).__name__}"
+            )
+
+        if not isinstance(self.SESSION_GAP_MINUTES, int):
+            raise TypeError(
+                f"SESSION_GAP_MINUTES doit être un entier (int), "
+                f"reçu: {type(self.SESSION_GAP_MINUTES).__name__}"
+            )
+
+        # Type checking for string parameters
+        if not isinstance(self.LOGS_FILE_PATH, str):
+            raise TypeError(
+                f"LOGS_FILE_PATH doit être une chaîne (str), "
+                f"reçu: {type(self.LOGS_FILE_PATH).__name__}"
+            )
+
+        if not isinstance(self.NOTES_FILE_PATH, str):
+            raise TypeError(
+                f"NOTES_FILE_PATH doit être une chaîne (str), "
+                f"reçu: {type(self.NOTES_FILE_PATH).__name__}"
+            )
+
+        if not isinstance(self.OUTPUT_DIR, str):
+            raise TypeError(
+                f"OUTPUT_DIR doit être une chaîne (str), "
+                f"reçu: {type(self.OUTPUT_DIR).__name__}"
+            )
+
+        if not isinstance(self.DATETIME_FORMAT, str):
+            raise TypeError(
+                f"DATETIME_FORMAT doit être une chaîne (str), "
+                f"reçu: {type(self.DATETIME_FORMAT).__name__}"
+            )
+
+        if not isinstance(self.DUPLICATE_KEEP, str):
+            raise TypeError(
+                f"DUPLICATE_KEEP doit être une chaîne (str), "
+                f"reçu: {type(self.DUPLICATE_KEEP).__name__}"
+            )
+
+        if not isinstance(self.PLOT_STYLE, str):
+            raise TypeError(
+                f"PLOT_STYLE doit être une chaîne (str), "
+                f"reçu: {type(self.PLOT_STYLE).__name__}"
+            )
+
+        if not isinstance(self.PLOT_COLOR_PALETTE, str):
+            raise TypeError(
+                f"PLOT_COLOR_PALETTE doit être une chaîne (str), "
+                f"reçu: {type(self.PLOT_COLOR_PALETTE).__name__}"
+            )
+
+        if not isinstance(self.PLOT_SAVE_FORMAT, str):
+            raise TypeError(
+                f"PLOT_SAVE_FORMAT doit être une chaîne (str), "
+                f"reçu: {type(self.PLOT_SAVE_FORMAT).__name__}"
+            )
+
+        # Type checking for boolean parameters
+        if not isinstance(self.FEATURE_HOUR_OF_DAY, bool):
+            raise TypeError(
+                f"FEATURE_HOUR_OF_DAY doit être un booléen (bool), "
+                f"reçu: {type(self.FEATURE_HOUR_OF_DAY).__name__}"
+            )
+
+        if not isinstance(self.FEATURE_DAY_OF_WEEK, bool):
+            raise TypeError(
+                f"FEATURE_DAY_OF_WEEK doit être un booléen (bool), "
+                f"reçu: {type(self.FEATURE_DAY_OF_WEEK).__name__}"
+            )
+
+        if not isinstance(self.FEATURE_SESSION_COUNT, bool):
+            raise TypeError(
+                f"FEATURE_SESSION_COUNT doit être un booléen (bool), "
+                f"reçu: {type(self.FEATURE_SESSION_COUNT).__name__}"
+            )
+
+        if not isinstance(self.FEATURE_TOTAL_EVENTS, bool):
+            raise TypeError(
+                f"FEATURE_TOTAL_EVENTS doit être un booléen (bool), "
+                f"reçu: {type(self.FEATURE_TOTAL_EVENTS).__name__}"
+            )
+
+        # Type checking for collection parameters
+        if not isinstance(self.PLOT_FIGSIZE, tuple):
+            raise TypeError(
+                f"PLOT_FIGSIZE doit être un tuple, "
+                f"reçu: {type(self.PLOT_FIGSIZE).__name__}"
+            )
+
+        if not isinstance(self.FEATURE_EVENT_TYPES, list):
+            raise TypeError(
+                f"FEATURE_EVENT_TYPES doit être une liste (list), "
+                f"reçu: {type(self.FEATURE_EVENT_TYPES).__name__}"
+            )
+
+        if not isinstance(self.LOGS_COLUMN_MAPPING, dict):
+            raise TypeError(
+                f"LOGS_COLUMN_MAPPING doit être un dictionnaire (dict), "
+                f"reçu: {type(self.LOGS_COLUMN_MAPPING).__name__}"
+            )
+
+        if not isinstance(self.NOTES_COLUMN_MAPPING, dict):
+            raise TypeError(
+                f"NOTES_COLUMN_MAPPING doit être un dictionnaire (dict), "
+                f"reçu: {type(self.NOTES_COLUMN_MAPPING).__name__}"
+            )
+
+        if not isinstance(self.COMPOSANT_CATEGORIES, dict):
+            raise TypeError(
+                f"COMPOSANT_CATEGORIES doit être un dictionnaire (dict), "
+                f"reçu: {type(self.COMPOSANT_CATEGORIES).__name__}"
+            )
+
+        if not isinstance(self.EVENEMENT_CATEGORIES, dict):
+            raise TypeError(
+                f"EVENEMENT_CATEGORIES doit être un dictionnaire (dict), "
+                f"reçu: {type(self.EVENEMENT_CATEGORIES).__name__}"
+            )
+
         # Validate TRAIN_TEST_SPLIT_RATIO
         if not (0 < self.TRAIN_TEST_SPLIT_RATIO < 1):
             raise ValueError(
