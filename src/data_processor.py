@@ -356,6 +356,85 @@ class DataProcessor:
 
         return pivot.reset_index()
 
+    def compute_consistency_features(self, df):
+        """
+        Calcule des métriques de régularité et de cohérence de l'engagement étudiant.
+
+        Métriques calculées :
+        - streak_days: nombre maximum de jours consécutifs d'activité
+        - avg_gap_days: nombre moyen de jours entre deux sessions
+        - std_gap_days: écart-type des jours entre sessions (mesure de régularité)
+        - study_frequency: nombre moyen de jours actifs par semaine
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo' et 'heure'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et les métriques de cohérence.
+        """
+        df = df.copy()
+        df['heure'] = pd.to_datetime(df['heure'], errors='coerce')
+        df['date'] = df['heure'].dt.date
+
+        # Get unique active dates per student
+        student_dates = df.groupby('pseudo')['date'].apply(lambda x: sorted(x.unique())).reset_index()
+
+        def calculate_streak_days(dates):
+            """Calcule la plus longue série de jours consécutifs."""
+            if len(dates) == 0:
+                return 0
+            if len(dates) == 1:
+                return 1
+
+            # Convert dates to pandas datetime for easier manipulation
+            dates = pd.to_datetime(dates)
+            max_streak = 1
+            current_streak = 1
+
+            for i in range(1, len(dates)):
+                diff = (dates[i] - dates[i-1]).days
+                if diff == 1:
+                    current_streak += 1
+                    max_streak = max(max_streak, current_streak)
+                else:
+                    current_streak = 1
+
+            return max_streak
+
+        def calculate_gap_stats(dates):
+            """Calcule les statistiques sur les écarts entre sessions."""
+            if len(dates) <= 1:
+                return 0.0, 0.0
+
+            dates = pd.to_datetime(dates)
+            gaps = [(dates[i] - dates[i-1]).days for i in range(1, len(dates))]
+            return round(sum(gaps) / len(gaps), 2), round(pd.Series(gaps).std(), 2)
+
+        def calculate_study_frequency(dates):
+            """Calcule le nombre moyen de jours actifs par semaine."""
+            if len(dates) == 0:
+                return 0.0
+
+            dates = pd.to_datetime(dates)
+            total_days = (dates.max() - dates.min()).days
+            if total_days == 0:
+                return len(dates)
+
+            weeks = total_days / 7.0
+            return round(len(dates) / max(weeks, 1), 2)
+
+        # Calculate metrics for each student
+        student_dates['streak_days'] = student_dates['date'].apply(calculate_streak_days)
+        student_dates[['avg_gap_days', 'std_gap_days']] = student_dates['date'].apply(
+            lambda x: pd.Series(calculate_gap_stats(x))
+        )
+        student_dates['study_frequency'] = student_dates['date'].apply(calculate_study_frequency)
+
+        # Drop the intermediate date column
+        student_dates = student_dates.drop(columns=['date'])
+
+        return student_dates
+
     def merge_logs_notes(self, logs_df, notes_df):
         """
         Fusionne les métriques d'activité par étudiant avec les notes.
