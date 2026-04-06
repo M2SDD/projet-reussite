@@ -405,3 +405,62 @@ class Config:
                 f"SESSION_GAP_MINUTES doit être strictement positif, "
                 f"reçu: {self.SESSION_GAP_MINUTES}"
             )
+
+    def export_defaults(self, file_path):
+        """
+        Exporte la configuration actuelle vers un fichier JSON ou YAML.
+
+        Cette méthode permet de sauvegarder tous les paramètres de configuration
+        actuels dans un fichier, qui peut ensuite être rechargé via le paramètre
+        config_file du constructeur.
+
+        Args:
+            file_path (str): Chemin du fichier de destination.
+                            Le format est déterminé par l'extension (.json, .yaml, .yml).
+                            Par défaut, utilise le format JSON.
+
+        Raises:
+            ImportError: Si le format YAML est demandé mais PyYAML n'est pas installé
+            IOError: Si l'écriture du fichier échoue
+
+        Example:
+            >>> config = Config()
+            >>> config.export_defaults('config.json')
+            >>> # Le fichier config.json contient tous les paramètres de configuration
+        """
+        # Collect all configuration attributes
+        config_data = {}
+        for attr_name in dir(self):
+            # Skip private/protected attributes and methods
+            if attr_name.startswith('_'):
+                continue
+
+            # Skip methods
+            attr_value = getattr(self, attr_name)
+            if callable(attr_value):
+                continue
+
+            # Add to config data
+            config_data[attr_name] = attr_value
+
+        # Determine file format from extension
+        _, ext = os.path.splitext(file_path)
+        ext = ext.lower()
+
+        # Ensure parent directory exists
+        parent_dir = os.path.dirname(file_path)
+        if parent_dir and not os.path.exists(parent_dir):
+            os.makedirs(parent_dir, exist_ok=True)
+
+        # Write configuration to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            if ext in ['.yaml', '.yml']:
+                if not YAML_AVAILABLE:
+                    raise ImportError(
+                        "PyYAML n'est pas installé. "
+                        "Installez-le avec: pip install pyyaml"
+                    )
+                yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
+            else:
+                # Default to JSON format
+                json.dump(config_data, f, indent=4, ensure_ascii=False)
