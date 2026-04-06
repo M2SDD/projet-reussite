@@ -634,7 +634,9 @@ class DataProcessor:
         1. clean_logs pour nettoyer les logs
         2. clean_notes pour nettoyer les notes
         3. extract_temporal_features pour enrichir les logs
-        4. merge_logs_notes pour fusionner métriques et notes
+        4. build_engagement_features pour calculer les features d'engagement
+        5. merge_logs_notes pour fusionner métriques et notes
+        6. Merge des features d'engagement dans le dataset final
 
         Args:
             logs_df (pd.DataFrame): DataFrame de logs brut.
@@ -658,8 +660,14 @@ class DataProcessor:
         # Extract temporal features
         logs_enriched = self.extract_temporal_features(logs_clean)
 
+        # Build engagement features
+        engagement_features = self.build_engagement_features(logs_enriched)
+
         # Merge into student-level dataset
         result = self.merge_logs_notes(logs_enriched, notes_clean)
+
+        # Merge engagement features into final dataset
+        result = result.merge(engagement_features, on='pseudo', how='left')
 
         return result
 
