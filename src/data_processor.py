@@ -1104,6 +1104,83 @@ class DataProcessor:
         # Return DataFrame with selected features
         return X[selected_features]
 
+    def select_features_pipeline(self, df, target, variance_threshold=0.0, correlation_threshold=0.95, k=10, score_func=f_regression):
+        """
+        Pipeline complet de sélection de features combinant plusieurs méthodes.
+
+        Cette méthode applique séquentiellement plusieurs techniques de sélection de features
+        pour réduire la dimensionnalité et améliorer la qualité du jeu de données :
+        1. Filtrage par variance : élimine les features avec variance faible
+        2. Filtrage par corrélation : élimine les features redondantes
+        3. Sélection K-Best : sélectionne les k meilleures features statistiquement
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target (str): Le nom de la colonne cible à prédire.
+            variance_threshold (float): Seuil minimal de variance. Par défaut 0.0.
+            correlation_threshold (float): Seuil de corrélation entre features. Par défaut 0.95.
+            k (int): Nombre de features à sélectionner finalement. Par défaut 10.
+            score_func (callable): Fonction de score pour SelectKBest. Par défaut f_regression.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les features sélectionnées après
+                application du pipeline complet.
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+
+        Example:
+            >>> df = pd.DataFrame({'feat1': [1, 2, 3], 'feat2': [1, 1, 1],
+            ...                    'feat3': [4, 5, 6], 'target': [10, 20, 30]})
+            >>> processor = DataProcessor()
+            >>> selected = processor.select_features_pipeline(df, 'target', k=2)
+        """
+        if target not in df.columns:
+            raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
+
+        # Separate target from features
+        y = df[target]
+        X = df.drop(columns=[target])
+
+        initial_features = len(X.select_dtypes(include=['number']).columns)
+
+        # Step 1: Remove low variance features
+        X_variance = self.select_by_variance(X, threshold=variance_threshold)
+        features_after_variance = len(X_variance.select_dtypes(include=['number']).columns)
+
+        # Step 2: Remove highly correlated features
+        X_correlation = self.select_by_correlation(X_variance, threshold=correlation_threshold)
+        features_after_correlation = len(X_correlation.select_dtypes(include=['number']).columns)
+
+        # Step 3: Select k best features
+        # Re-add target column for select_k_best
+        X_with_target = X_correlation.copy()
+        X_with_target[target] = y
+
+        # Adjust k if necessary
+        numeric_features = len(X_correlation.select_dtypes(include=['number']).columns)
+        k_adjusted = min(k, numeric_features)
+
+        if k_adjusted < k:
+            warnings.warn(
+                f"k ajusté de {k} à {k_adjusted} car seulement {numeric_features} features disponibles après filtrage.",
+                UserWarning,
+            )
+
+        X_final = self.select_k_best(X_with_target, target, k=k_adjusted, score_func=score_func)
+
+        # Pipeline summary
+        warnings.warn(
+            f"Pipeline de sélection terminé: {initial_features} features → "
+            f"{features_after_variance} (variance) → "
+            f"{features_after_correlation} (corrélation) → "
+            f"{len(X_final.columns)} (k-best)",
+            UserWarning,
+        )
+
+        return X_final
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
