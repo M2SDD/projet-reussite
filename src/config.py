@@ -21,6 +21,13 @@ __status__ = "Production"
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
 import json
+import os
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -116,13 +123,28 @@ class Config:
         Initialise la configuration avec les paramètres par défaut.
 
         Args:
-            config_file (str, optional): Chemin vers un fichier JSON de configuration.
+            config_file (str, optional): Chemin vers un fichier JSON ou YAML de configuration.
                                          Les valeurs du fichier surchargent les valeurs par défaut.
+                                         Formats supportés: .json, .yaml, .yml
         """
         if config_file is not None:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
+            _, ext = os.path.splitext(config_file)
+            ext = ext.lower()
 
-            # Override class attributes with values from JSON
+            with open(config_file, 'r', encoding='utf-8') as f:
+                if ext in ['.yaml', '.yml']:
+                    if not YAML_AVAILABLE:
+                        raise ImportError(
+                            "PyYAML n'est pas installé. "
+                            "Installez-le avec: pip install pyyaml"
+                        )
+                    config_data = yaml.safe_load(f)
+                elif ext == '.json':
+                    config_data = json.load(f)
+                else:
+                    # Default to JSON for backwards compatibility
+                    config_data = json.load(f)
+
+            # Override class attributes with values from config file
             for key, value in config_data.items():
                 setattr(self, key, value)
