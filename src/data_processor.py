@@ -435,6 +435,57 @@ class DataProcessor:
 
         return student_dates
 
+    def compute_interaction_depth_features(self, df):
+        """
+        Calcule des métriques de profondeur et de diversité d'engagement étudiant.
+
+        Métriques calculées :
+        - component_diversity: nombre de composants uniques utilisés
+        - context_diversity: nombre de contextes uniques explorés
+        - avg_interactions_per_component: nombre moyen d'interactions par composant
+        - component_switch_rate: taux de changement de composant (transitions / total interactions)
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs avec colonnes 'pseudo', 'composant', 'contexte', 'heure'.
+
+        Returns:
+            pd.DataFrame: DataFrame avec une ligne par étudiant et les métriques de profondeur d'engagement.
+        """
+        df = df.copy()
+        df['heure'] = pd.to_datetime(df['heure'], errors='coerce')
+
+        grouped = df.groupby('pseudo')
+
+        metrics = pd.DataFrame({
+            'component_diversity': grouped['composant'].nunique(),
+            'context_diversity': grouped['contexte'].nunique(),
+        })
+
+        # Calculate average interactions per component
+        def calc_avg_interactions_per_component(group):
+            if len(group) == 0:
+                return 0.0
+            comp_counts = group['composant'].value_counts()
+            return round(comp_counts.mean(), 2)
+
+        metrics['avg_interactions_per_component'] = grouped.apply(
+            calc_avg_interactions_per_component
+        )
+
+        # Calculate component switch rate
+        def calc_component_switch_rate(group):
+            if len(group) <= 1:
+                return 0.0
+            # Sort by time to get sequential interactions
+            sorted_group = group.sort_values('heure')
+            # Count switches (when component changes)
+            switches = (sorted_group['composant'] != sorted_group['composant'].shift()).sum() - 1
+            return round(switches / len(group), 2)
+
+        metrics['component_switch_rate'] = grouped.apply(calc_component_switch_rate)
+
+        return metrics.reset_index()
+
     def merge_logs_notes(self, logs_df, notes_df):
         """
         Fusionne les métriques d'activité par étudiant avec les notes.
