@@ -152,6 +152,11 @@ class Config:
                 # Override class attributes with values from config file
                 for key, value in config_data.items():
                     setattr(self, key, value)
+
+                # Post-process: Convert lists to tuples where needed
+                # JSON arrays are loaded as lists, but some config values need to be tuples
+                if hasattr(self, 'PLOT_FIGSIZE') and isinstance(self.PLOT_FIGSIZE, list):
+                    self.PLOT_FIGSIZE = tuple(self.PLOT_FIGSIZE)
             except FileNotFoundError:
                 # Gracefully fallback to defaults if config file is missing
                 pass
