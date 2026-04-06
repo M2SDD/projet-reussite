@@ -488,8 +488,211 @@ class TestDetectOutliers:
 
 class TestCharacterizeDistribution:
     """Test characterize_distribution functionality."""
-    # Tests will be implemented in subtask-2-4
-    pass
+
+    def test_characterize_distribution_basic(self, stats_module, sample_numeric_df):
+        """Test that distribution characteristics are computed correctly for numeric columns."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        # Verify structure
+        assert isinstance(result, dict)
+        expected_keys = ['skewness', 'kurtosis']
+        assert set(result.keys()) == set(expected_keys)
+
+        # Verify all numeric columns are present
+        for key in expected_keys:
+            assert 'score' in result[key]
+            assert 'age' in result[key]
+            assert 'hours_studied' in result[key]
+
+    def test_characterize_distribution_skewness(self, stats_module, sample_numeric_df):
+        """Test that skewness is computed correctly."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        # Verify skewness values are numeric
+        for col, value in result['skewness'].items():
+            assert isinstance(value, (int, float, np.number))
+            assert not np.isnan(value)
+
+    def test_characterize_distribution_kurtosis(self, stats_module, sample_numeric_df):
+        """Test that kurtosis is computed correctly."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        # Verify kurtosis values are numeric
+        for col, value in result['kurtosis'].items():
+            assert isinstance(value, (int, float, np.number))
+            assert not np.isnan(value)
+
+    def test_characterize_distribution_normal(self, stats_module, normal_df):
+        """Test that normal distribution has near-zero skewness."""
+        result = stats_module.characterize_distribution(normal_df)
+
+        # Normal distribution should have skewness close to 0
+        assert abs(result['skewness']['normal_dist']) < 0.5
+
+        # Normal distribution should have kurtosis close to 0 (excess kurtosis)
+        assert abs(result['kurtosis']['normal_dist']) < 1.0
+
+    def test_characterize_distribution_skewed(self, stats_module, skewed_df):
+        """Test that skewed distribution has non-zero skewness."""
+        result = stats_module.characterize_distribution(skewed_df)
+
+        # Right-skewed distribution should have positive skewness
+        assert result['skewness']['right_skewed'] > 0
+
+    def test_characterize_distribution_mixed_df(self, stats_module, sample_mixed_df):
+        """Test that only numeric columns are processed in mixed DataFrame."""
+        result = stats_module.characterize_distribution(sample_mixed_df)
+
+        # Only numeric columns should be present
+        assert 'pseudo' in result['skewness']
+        assert 'note' in result['skewness']
+        assert 'nom' not in result['skewness']
+        assert 'heure' not in result['skewness']
+
+    def test_characterize_distribution_empty_df(self, stats_module, empty_df):
+        """Test that empty DataFrame returns empty dict with warning."""
+        with pytest.warns(UserWarning, match='Aucune colonne numérique'):
+            result = stats_module.characterize_distribution(empty_df)
+
+        assert result == {}
+
+    def test_characterize_distribution_non_numeric_df(self, stats_module, non_numeric_df):
+        """Test that DataFrame with no numeric columns returns empty dict with warning."""
+        with pytest.warns(UserWarning, match='Aucune colonne numérique'):
+            result = stats_module.characterize_distribution(non_numeric_df)
+
+        assert result == {}
+
+    def test_characterize_distribution_single_row(self, stats_module, single_row_df):
+        """Test that single row DataFrame returns NaN for skewness and kurtosis."""
+        result = stats_module.characterize_distribution(single_row_df)
+
+        # Single value should result in NaN for skewness and kurtosis
+        assert np.isnan(result['skewness']['value'])
+        assert np.isnan(result['kurtosis']['value'])
+
+    def test_characterize_distribution_with_missing(self, stats_module, df_with_missing):
+        """Test that missing values are handled correctly (excluded from calculations)."""
+        result = stats_module.characterize_distribution(df_with_missing)
+
+        # Should have results for both columns
+        assert 'col1' in result['skewness']
+        assert 'col2' in result['skewness']
+
+        # Values should be numeric (not NaN) if there are enough non-missing values
+        # col1 has 4 non-NaN values, col2 has 3 non-NaN values
+        assert isinstance(result['skewness']['col1'], (int, float, np.number))
+        assert isinstance(result['skewness']['col2'], (int, float, np.number))
+
+    def test_characterize_distribution_no_side_effects(self, stats_module, sample_numeric_df):
+        """Test that characterizing distribution does not modify the original DataFrame."""
+        original_df = sample_numeric_df.copy()
+        stats_module.characterize_distribution(sample_numeric_df)
+
+        pd.testing.assert_frame_equal(sample_numeric_df, original_df)
+
+    def test_characterize_distribution_returns_dict(self, stats_module, sample_numeric_df):
+        """Test that the function returns a dictionary."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        assert isinstance(result, dict)
+
+    def test_characterize_distribution_preserves_column_names(self, stats_module, sample_numeric_df):
+        """Test that original column names are preserved in results."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        expected_columns = set(sample_numeric_df.columns)
+        actual_skewness_columns = set(result['skewness'].keys())
+        actual_kurtosis_columns = set(result['kurtosis'].keys())
+
+        assert expected_columns == actual_skewness_columns
+        assert expected_columns == actual_kurtosis_columns
+
+    def test_characterize_distribution_both_stats_same_columns(self, stats_module, sample_numeric_df):
+        """Test that skewness and kurtosis have the same columns."""
+        result = stats_module.characterize_distribution(sample_numeric_df)
+
+        skewness_cols = set(result['skewness'].keys())
+        kurtosis_cols = set(result['kurtosis'].keys())
+
+        assert skewness_cols == kurtosis_cols
+
+    def test_characterize_distribution_known_values(self, stats_module):
+        """Test against known skewness and kurtosis values."""
+        # Create a DataFrame with known distribution
+        # Uniform distribution should have skewness close to 0 and negative kurtosis
+        df = pd.DataFrame({
+            'uniform': list(range(1, 101)),  # 1 to 100
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # Uniform distribution should have near-zero skewness
+        assert abs(result['skewness']['uniform']) < 0.1
+
+        # Uniform distribution should have negative excess kurtosis (platykurtic)
+        assert result['kurtosis']['uniform'] < 0
+
+    def test_characterize_distribution_all_same_values(self, stats_module):
+        """Test that all identical values produce 0 for skewness and kurtosis."""
+        df = pd.DataFrame({
+            'values': [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # All same values should result in 0 (no variation)
+        assert result['skewness']['values'] == 0.0
+        assert result['kurtosis']['values'] == 0.0
+
+    def test_characterize_distribution_two_values(self, stats_module):
+        """Test that two values produce valid skewness and kurtosis."""
+        df = pd.DataFrame({
+            'values': [1, 2],
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # Two values should produce NaN or specific values depending on pandas implementation
+        # Just verify the structure is correct
+        assert 'skewness' in result
+        assert 'kurtosis' in result
+        assert 'values' in result['skewness']
+        assert 'values' in result['kurtosis']
+
+    def test_characterize_distribution_positive_skewness(self, stats_module):
+        """Test detection of positive skewness (right-tailed distribution)."""
+        df = pd.DataFrame({
+            'right_tail': [1, 2, 3, 4, 5, 6, 7, 8, 9, 100],
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # Should have positive skewness due to the outlier 100
+        assert result['skewness']['right_tail'] > 1.0
+
+    def test_characterize_distribution_negative_skewness(self, stats_module):
+        """Test detection of negative skewness (left-tailed distribution)."""
+        df = pd.DataFrame({
+            'left_tail': [-100, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # Should have negative skewness due to the outlier -100
+        assert result['skewness']['left_tail'] < -1.0
+
+    def test_characterize_distribution_high_kurtosis(self, stats_module):
+        """Test detection of high kurtosis (peaked distribution)."""
+        # Create a distribution with most values near the mean and few extreme values
+        df = pd.DataFrame({
+            'peaked': [50] * 40 + [1, 2, 3, 98, 99, 100],
+        })
+
+        result = stats_module.characterize_distribution(df)
+
+        # Should have positive excess kurtosis (leptokurtic)
+        assert result['kurtosis']['peaked'] > 0
 
 
 class TestComputeDataSummary:
