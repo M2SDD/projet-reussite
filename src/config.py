@@ -126,6 +126,9 @@ class Config:
             config_file (str, optional): Chemin vers un fichier JSON ou YAML de configuration.
                                          Les valeurs du fichier surchargent les valeurs par défaut.
                                          Formats supportés: .json, .yaml, .yml
+
+        Raises:
+            ValueError: Si les paramètres de configuration sont invalides après chargement
         """
         if config_file is not None:
             try:
@@ -152,3 +155,75 @@ class Config:
             except FileNotFoundError:
                 # Gracefully fallback to defaults if config file is missing
                 pass
+
+        # Validate configuration parameters
+        self._validate()
+
+    def _validate(self):
+        """
+        Valide les paramètres de configuration.
+
+        Vérifie que tous les paramètres respectent les contraintes attendues :
+        - TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1
+        - CV_FOLDS doit être au moins 2
+        - NOTE_MIN doit être inférieur à NOTE_MAX
+        - PLOT_DPI doit être strictement positif
+        - RISK_THRESHOLD_HIGH doit être inférieur à RISK_THRESHOLD_MEDIUM
+        - Les seuils de risque doivent être dans la plage [NOTE_MIN, NOTE_MAX]
+        - SESSION_GAP_MINUTES doit être strictement positif
+
+        Raises:
+            ValueError: Si un paramètre est invalide, avec un message descriptif
+        """
+        # Validate TRAIN_TEST_SPLIT_RATIO
+        if not (0 < self.TRAIN_TEST_SPLIT_RATIO < 1):
+            raise ValueError(
+                f"TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1, "
+                f"reçu: {self.TRAIN_TEST_SPLIT_RATIO}"
+            )
+
+        # Validate CV_FOLDS
+        if self.CV_FOLDS < 2:
+            raise ValueError(
+                f"CV_FOLDS doit être au moins 2, reçu: {self.CV_FOLDS}"
+            )
+
+        # Validate NOTE_MIN and NOTE_MAX
+        if self.NOTE_MIN >= self.NOTE_MAX:
+            raise ValueError(
+                f"NOTE_MIN ({self.NOTE_MIN}) doit être inférieur à "
+                f"NOTE_MAX ({self.NOTE_MAX})"
+            )
+
+        # Validate PLOT_DPI
+        if self.PLOT_DPI <= 0:
+            raise ValueError(
+                f"PLOT_DPI doit être strictement positif, reçu: {self.PLOT_DPI}"
+            )
+
+        # Validate risk thresholds are within note range
+        if not (self.NOTE_MIN <= self.RISK_THRESHOLD_HIGH <= self.NOTE_MAX):
+            raise ValueError(
+                f"RISK_THRESHOLD_HIGH ({self.RISK_THRESHOLD_HIGH}) doit être "
+                f"dans la plage [{self.NOTE_MIN}, {self.NOTE_MAX}]"
+            )
+
+        if not (self.NOTE_MIN <= self.RISK_THRESHOLD_MEDIUM <= self.NOTE_MAX):
+            raise ValueError(
+                f"RISK_THRESHOLD_MEDIUM ({self.RISK_THRESHOLD_MEDIUM}) doit être "
+                f"dans la plage [{self.NOTE_MIN}, {self.NOTE_MAX}]"
+            )
+
+        # Validate risk threshold ordering
+        if self.RISK_THRESHOLD_HIGH >= self.RISK_THRESHOLD_MEDIUM:
+            raise ValueError(
+                f"RISK_THRESHOLD_HIGH ({self.RISK_THRESHOLD_HIGH}) doit être "
+                f"inférieur à RISK_THRESHOLD_MEDIUM ({self.RISK_THRESHOLD_MEDIUM})"
+            )
+
+        # Validate SESSION_GAP_MINUTES
+        if self.SESSION_GAP_MINUTES <= 0:
+            raise ValueError(
+                f"SESSION_GAP_MINUTES doit être strictement positif, "
+                f"reçu: {self.SESSION_GAP_MINUTES}"
+            )
