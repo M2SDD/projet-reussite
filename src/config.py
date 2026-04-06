@@ -98,6 +98,14 @@ class Config:
     CV_FOLDS = 5  # Number of folds for cross-validation
     RANDOM_STATE = 42  # Random seed for reproducibility
 
+    # Visualization and plotting parameters
+    PLOT_DPI = 100  # Resolution for saved plots
+    PLOT_FIGSIZE = (10, 6)  # Default figure size (width, height) in inches
+    PLOT_STYLE = 'seaborn-v0_8'  # Matplotlib style
+    PLOT_COLOR_PALETTE = 'Set2'  # Default color palette
+    PLOT_SAVE_FORMAT = 'png'  # Default format for saved plots
+    PLOT_FONT_SIZE = 12  # Default font size for plots
+
     def __init__(self):
         """
         Initialise la configuration avec les paramètres par défaut.
