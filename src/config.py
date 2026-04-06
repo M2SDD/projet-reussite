@@ -20,6 +20,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+import json
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -110,8 +111,18 @@ class Config:
     PLOT_SAVE_FORMAT = 'png'  # Default format for saved plots
     PLOT_FONT_SIZE = 12  # Default font size for plots
 
-    def __init__(self):
+    def __init__(self, config_file=None):
         """
         Initialise la configuration avec les paramètres par défaut.
+
+        Args:
+            config_file (str, optional): Chemin vers un fichier JSON de configuration.
+                                         Les valeurs du fichier surchargent les valeurs par défaut.
         """
-        pass
+        if config_file is not None:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+
+            # Override class attributes with values from JSON
+            for key, value in config_data.items():
+                setattr(self, key, value)
