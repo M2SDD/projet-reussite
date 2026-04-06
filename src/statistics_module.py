@@ -108,6 +108,56 @@ class StatisticsModule:
         """
         pass
 
+    def compute_summary_statistics(self, df):
+        """
+        Calcule les statistiques descriptives pour toutes les colonnes numériques.
+
+        Calcule pour chaque colonne numérique :
+        - Mesures de tendance centrale (mean, median)
+        - Mesures de dispersion (std, variance, min, max, range)
+        - Quantiles (25%, 50%, 75%)
+        - Nombre d'observations (count)
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les données à analyser.
+
+        Returns:
+            dict: Dictionnaire avec les statistiques pour chaque colonne numérique.
+                  Structure : {
+                      'mean': {col1: val1, col2: val2, ...},
+                      'median': {col1: val1, col2: val2, ...},
+                      'std': {col1: val1, col2: val2, ...},
+                      ...
+                  }
+        """
+        # Sélectionner uniquement les colonnes numériques
+        numeric_df = df.select_dtypes(include=[np.number])
+
+        if numeric_df.empty:
+            import warnings
+            warnings.warn(
+                "Aucune colonne numérique trouvée dans le DataFrame.",
+                UserWarning,
+            )
+            return {}
+
+        # Calculer les statistiques
+        stats = {
+            'count': numeric_df.count().to_dict(),
+            'mean': numeric_df.mean().to_dict(),
+            'median': numeric_df.median().to_dict(),
+            'std': numeric_df.std().to_dict(),
+            'variance': numeric_df.var().to_dict(),
+            'min': numeric_df.min().to_dict(),
+            'max': numeric_df.max().to_dict(),
+            'range': (numeric_df.max() - numeric_df.min()).to_dict(),
+            'q25': numeric_df.quantile(0.25).to_dict(),
+            'q50': numeric_df.quantile(0.50).to_dict(),
+            'q75': numeric_df.quantile(0.75).to_dict(),
+        }
+
+        return stats
+
     def generate_summary(self, data):
         """
         Génère un résumé statistique complet des données.
