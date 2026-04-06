@@ -165,3 +165,52 @@ if __name__ == '__main__':
     if 'weekend_activity_ratio' in engagement_df.columns:
         print(f"  - Avg weekend activity ratio: {engagement_df['weekend_activity_ratio'].mean():.2f}")
     print()
+
+    # --------------------------------------------------------------------------
+    # Statistical Analysis
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Statistical Analysis")
+    print("=" * 60)
+    print()
+
+    # Merge engagement features with student data for analysis
+    print("Merging engagement features with student grades...")
+    analysis_df = student_df.merge(engagement_df, on='pseudo', how='inner')
+    print(f"Analysis dataset created: {analysis_df.shape[0]} students, {analysis_df.shape[1]} features")
+    print()
+
+    # Compute feature correlations with target (note)
+    print("Computing feature correlations with target variable (note)...")
+    feature_correlations = processor.compute_feature_correlations(analysis_df, target_col='note')
+    print("Top 10 features most correlated with final grade:")
+    print(feature_correlations.abs().sort_values(ascending=False).head(10))
+    print()
+
+    # Compute descriptive statistics for all features
+    print("Computing descriptive statistics for engagement features...")
+    engagement_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note', 'note_binaire']]
+    descriptive_stats = processor.compute_descriptive_statistics(analysis_df[engagement_cols])
+    print("Descriptive statistics summary (first 5 features):")
+    print(descriptive_stats.head(5))
+    print()
+
+    # Test statistical significance of features
+    print("Testing statistical significance of features...")
+    significance_results = processor.test_feature_significance(analysis_df, target_col='note')
+    print("Features with significant correlation (p < 0.05):")
+    significant_features = significance_results[significance_results['p_value'] < 0.05].sort_values('p_value')
+    print(f"  - Total significant features: {len(significant_features)}/{len(significance_results)}")
+    print("  - Top 5 most significant features:")
+    print(significant_features.head(5)[['correlation', 'p_value', 'significant']])
+    print()
+
+    # Compute correlation matrix for multicollinearity check
+    print("Computing feature correlation matrix for multicollinearity analysis...")
+    correlation_matrix = processor.compute_correlation_matrix(analysis_df[engagement_cols[:10]])  # Limit to first 10 for display
+    print("Sample correlation matrix (first 10 features):")
+    print(correlation_matrix)
+    print()
+
+    print("Statistical analysis completed successfully")
+    print()
