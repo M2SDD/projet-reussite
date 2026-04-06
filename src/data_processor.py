@@ -22,6 +22,8 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 import pandas as pd
 import warnings
+from scipy import stats
+from sklearn.feature_selection import SelectKBest, f_regression
 
 from .config import Config
 
@@ -692,6 +694,492 @@ class DataProcessor:
                 - students_merged: nombre total d'étudiants dans le dataset final
         """
         return dict(self._cleaning_report)
+
+    def compute_feature_correlations(self, df, target_column):
+        """
+        Calcule les corrélations entre toutes les features numériques et une colonne cible.
+
+        Utilise la corrélation de Pearson pour mesurer les relations linéaires
+        entre chaque feature et la variable cible.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target_column (str): Le nom de la colonne cible.
+
+        Returns:
+            pd.Series: Série contenant les corrélations de chaque feature avec la cible.
+                Les features sont triées par valeur absolue de corrélation décroissante.
+                L'index contient les noms des features (excluant la cible elle-même).
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        if target_column not in df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame."
+            )
+
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        if target_column not in numeric_df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'est pas numérique."
+            )
+
+        # Compute correlations with target
+        correlations = numeric_df.corr()[target_column]
+
+        # Remove the target column from results
+        correlations = correlations.drop(target_column)
+
+        # Sort by absolute correlation value (descending)
+        correlations = correlations.reindex(
+            correlations.abs().sort_values(ascending=False).index
+        )
+
+        return correlations
+
+    def compute_feature_feature_correlations(self, df, exclude_columns=None):
+        """
+        Calcule la matrice de corrélation complète entre toutes les features numériques.
+
+        Utilise la corrélation de Pearson pour mesurer les relations linéaires
+        entre toutes les paires de features. Utile pour détecter la multicolinéarité.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features.
+            exclude_columns (list): Liste optionnelle de colonnes à exclure de l'analyse
+                (par exemple, ['pseudo', 'note']).
+
+        Returns:
+            pd.DataFrame: Matrice de corrélation (n_features x n_features).
+                Les valeurs sont comprises entre -1 (corrélation négative parfaite)
+                et +1 (corrélation positive parfaite).
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Exclude specified columns if provided
+        if exclude_columns is not None:
+            exclude_columns = [col for col in exclude_columns if col in numeric_df.columns]
+            numeric_df = numeric_df.drop(columns=exclude_columns)
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError(
+                "Aucune colonne numérique restante après exclusion."
+            )
+
+        # Compute full correlation matrix
+        correlation_matrix = numeric_df.corr()
+
+        return correlation_matrix
+
+    def test_feature_significance(self, df, target_column):
+        """
+        Teste la significativité statistique des corrélations entre features et cible.
+
+        Utilise le test de corrélation de Pearson pour calculer les p-values
+        de chaque feature par rapport à la variable cible. Une p-value faible
+        (typiquement < 0.05) indique une corrélation statistiquement significative.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target_column (str): Le nom de la colonne cible.
+
+        Returns:
+            pd.DataFrame: DataFrame avec colonnes :
+                - 'feature': nom de la feature
+                - 'correlation': coefficient de corrélation de Pearson
+                - 'p_value': p-value du test de significativité
+                - 'is_significant': True si p_value < 0.05
+                Trié par p-value croissante (features les plus significatives en premier).
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+            ValueError: Si la colonne cible n'est pas numérique.
+        """
+        if target_column not in df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame."
+            )
+
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        if target_column not in numeric_df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'est pas numérique."
+            )
+
+        # Get target values
+        target = numeric_df[target_column].dropna()
+
+        # Test each feature
+        results = []
+        for col in numeric_df.columns:
+            if col == target_column:
+                continue
+
+            # Get feature values aligned with target
+            feature = numeric_df[col]
+
+            # Align feature and target (drop NaN in either)
+            valid_indices = target.index.intersection(feature.dropna().index)
+            if len(valid_indices) < 3:
+                # Need at least 3 points for meaningful correlation
+                warnings.warn(
+                    f"Feature '{col}' a moins de 3 valeurs valides, test ignoré.",
+                    UserWarning,
+                )
+                continue
+
+            aligned_feature = feature.loc[valid_indices]
+            aligned_target = target.loc[valid_indices]
+
+            # Compute Pearson correlation and p-value
+            try:
+                correlation, p_value = stats.pearsonr(aligned_feature, aligned_target)
+                results.append({
+                    'feature': col,
+                    'correlation': round(correlation, 4),
+                    'p_value': round(p_value, 6),
+                    'is_significant': p_value < 0.05
+                })
+            except Exception as e:
+                warnings.warn(
+                    f"Erreur lors du test de '{col}': {str(e)}",
+                    UserWarning,
+                )
+                continue
+
+        # Create result DataFrame
+        result_df = pd.DataFrame(results)
+
+        if len(result_df) == 0:
+            warnings.warn(
+                "Aucune feature valide pour le test de significativité.",
+                UserWarning,
+            )
+            return pd.DataFrame(columns=['feature', 'correlation', 'p_value', 'is_significant'])
+
+        # Sort by p-value (most significant first)
+        result_df = result_df.sort_values('p_value').reset_index(drop=True)
+
+        return result_df
+
+    def compute_descriptive_statistics(self, df):
+        """
+        Calcule les statistiques descriptives pour toutes les features numériques.
+
+        Calcule les statistiques suivantes pour chaque colonne numérique :
+        - count: nombre de valeurs non manquantes
+        - mean: moyenne
+        - std: écart-type
+        - min: valeur minimale
+        - 25%: premier quartile
+        - 50%: médiane
+        - 75%: troisième quartile
+        - max: valeur maximale
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à analyser.
+
+        Returns:
+            pd.DataFrame: DataFrame avec les features en lignes et les statistiques en colonnes.
+                Chaque ligne représente une feature, chaque colonne une statistique.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute descriptive statistics
+        stats = numeric_df.describe()
+
+        # Transpose to have features as rows and statistics as columns
+        stats_transposed = stats.T
+
+        return stats_transposed
+
+    def select_by_variance(self, df, threshold=0.0):
+        """
+        Sélectionne les features dont la variance dépasse un seuil donné.
+
+        Cette méthode de sélection de features élimine les colonnes avec une variance
+        faible, qui contiennent peu d'information utile pour la prédiction.
+        Une variance faible indique que les valeurs d'une feature varient peu,
+        ce qui la rend moins discriminante.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à filtrer.
+            threshold (float): Le seuil minimal de variance. Les colonnes avec une variance
+                strictement inférieure à ce seuil seront éliminées. Par défaut 0.0
+                (élimine uniquement les features constantes).
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les colonnes dont la variance
+                est supérieure ou égale au seuil. Les colonnes non numériques sont
+                préservées dans le résultat.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select numeric and non-numeric columns separately
+        numeric_df = df.select_dtypes(include=['number'])
+        non_numeric_df = df.select_dtypes(exclude=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute variance for each numeric column
+        variances = numeric_df.var()
+
+        # Select columns with variance >= threshold
+        selected_columns = variances[variances >= threshold].index.tolist()
+        removed_count = len(numeric_df.columns) - len(selected_columns)
+
+        if removed_count > 0:
+            removed_cols = [col for col in numeric_df.columns if col not in selected_columns]
+            warnings.warn(
+                f"{removed_count} colonnes avec variance < {threshold} ont été supprimées: {removed_cols}",
+                UserWarning,
+            )
+
+        # Filter numeric columns and combine with non-numeric columns
+        filtered_numeric = numeric_df[selected_columns]
+
+        # Combine non-numeric columns with filtered numeric columns
+        if len(non_numeric_df.columns) > 0:
+            result = pd.concat([non_numeric_df, filtered_numeric], axis=1)
+        else:
+            result = filtered_numeric
+
+        return result
+
+    def select_by_correlation(self, df, threshold=0.95):
+        """
+        Sélectionne les features en éliminant celles fortement corrélées entre elles.
+
+        Cette méthode de sélection de features identifie et supprime les features
+        redondantes en calculant la matrice de corrélation. Lorsque deux features
+        ont une corrélation (en valeur absolue) supérieure au seuil, l'une d'elles
+        est supprimée pour réduire la multicolinéarité.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à filtrer.
+            threshold (float): Le seuil de corrélation (en valeur absolue). Les paires
+                de features avec une corrélation |r| > threshold seront réduites en
+                ne gardant qu'une seule feature. Par défaut 0.95.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les features sélectionnées.
+                Les colonnes non numériques sont préservées dans le résultat.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select numeric and non-numeric columns separately
+        numeric_df = df.select_dtypes(include=['number'])
+        non_numeric_df = df.select_dtypes(exclude=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute correlation matrix
+        corr_matrix = numeric_df.corr().abs()
+
+        # Find features with correlation greater than threshold
+        to_drop = set()
+        columns = corr_matrix.columns
+
+        # Iterate through the correlation matrix
+        for i in range(len(columns)):
+            for j in range(i + 1, len(columns)):
+                if corr_matrix.iloc[i, j] > threshold:
+                    # Add the second column to the drop list
+                    to_drop.add(columns[j])
+
+        # Keep only columns not in to_drop
+        selected_columns = [col for col in numeric_df.columns if col not in to_drop]
+        removed_count = len(to_drop)
+
+        if removed_count > 0:
+            removed_cols = list(to_drop)
+            warnings.warn(
+                f"{removed_count} colonnes fortement corrélées (|r| > {threshold}) ont été supprimées: {removed_cols}",
+                UserWarning,
+            )
+
+        # Filter numeric columns and combine with non-numeric columns
+        filtered_numeric = numeric_df[selected_columns]
+
+        # Combine non-numeric columns with filtered numeric columns
+        if len(non_numeric_df.columns) > 0:
+            result = pd.concat([non_numeric_df, filtered_numeric], axis=1)
+        else:
+            result = filtered_numeric
+
+        return result
+
+    def select_k_best(self, df, target, k=10, score_func=f_regression):
+        """
+        Sélectionne les k meilleures features basées sur des tests statistiques univariés.
+
+        Cette méthode de sélection de features utilise SelectKBest de scikit-learn
+        pour évaluer chaque feature individuellement par rapport à la cible (target)
+        et sélectionner les k features ayant les scores les plus élevés.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target (str): Le nom de la colonne cible à prédire.
+            k (int): Le nombre de features à sélectionner. Par défaut 10.
+            score_func (callable): La fonction de score à utiliser pour l'évaluation.
+                Par défaut f_regression pour les problèmes de régression.
+                Utilisez f_classif pour les problèmes de classification.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les k meilleures features.
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas assez de colonnes numériques.
+            ValueError: Si k est supérieur au nombre de features disponibles.
+        """
+        if target not in df.columns:
+            raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
+
+        # Separate target from features
+        y = df[target]
+        X = df.drop(columns=[target])
+
+        # Select only numeric columns for feature selection
+        numeric_cols = X.select_dtypes(include=['number']).columns.tolist()
+
+        if len(numeric_cols) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique pour la sélection de features.")
+
+        if k > len(numeric_cols):
+            raise ValueError(
+                f"k ({k}) est supérieur au nombre de features disponibles ({len(numeric_cols)})."
+            )
+
+        # Extract numeric features
+        X_numeric = X[numeric_cols]
+
+        # Apply SelectKBest
+        selector = SelectKBest(score_func=score_func, k=k)
+        selector.fit(X_numeric, y)
+
+        # Get selected feature names
+        selected_mask = selector.get_support()
+        selected_features = [col for col, selected in zip(numeric_cols, selected_mask) if selected]
+
+        removed_count = len(numeric_cols) - len(selected_features)
+        if removed_count > 0:
+            removed_cols = [col for col in numeric_cols if col not in selected_features]
+            warnings.warn(
+                f"{removed_count} colonnes ont été exclues par SelectKBest: {removed_cols}",
+                UserWarning,
+            )
+
+        # Return DataFrame with selected features
+        return X[selected_features]
+
+    def select_features_pipeline(self, df, target, variance_threshold=0.0, correlation_threshold=0.95, k=10, score_func=f_regression):
+        """
+        Pipeline complet de sélection de features combinant plusieurs méthodes.
+
+        Cette méthode applique séquentiellement plusieurs techniques de sélection de features
+        pour réduire la dimensionnalité et améliorer la qualité du jeu de données :
+        1. Filtrage par variance : élimine les features avec variance faible
+        2. Filtrage par corrélation : élimine les features redondantes
+        3. Sélection K-Best : sélectionne les k meilleures features statistiquement
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target (str): Le nom de la colonne cible à prédire.
+            variance_threshold (float): Seuil minimal de variance. Par défaut 0.0.
+            correlation_threshold (float): Seuil de corrélation entre features. Par défaut 0.95.
+            k (int): Nombre de features à sélectionner finalement. Par défaut 10.
+            score_func (callable): Fonction de score pour SelectKBest. Par défaut f_regression.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les features sélectionnées après
+                application du pipeline complet.
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+
+        Example:
+            >>> df = pd.DataFrame({'feat1': [1, 2, 3], 'feat2': [1, 1, 1],
+            ...                    'feat3': [4, 5, 6], 'target': [10, 20, 30]})
+            >>> processor = DataProcessor()
+            >>> selected = processor.select_features_pipeline(df, 'target', k=2)
+        """
+        if target not in df.columns:
+            raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
+
+        # Separate target from features
+        y = df[target]
+        X = df.drop(columns=[target])
+
+        initial_features = len(X.select_dtypes(include=['number']).columns)
+
+        # Step 1: Remove low variance features
+        X_variance = self.select_by_variance(X, threshold=variance_threshold)
+        features_after_variance = len(X_variance.select_dtypes(include=['number']).columns)
+
+        # Step 2: Remove highly correlated features
+        X_correlation = self.select_by_correlation(X_variance, threshold=correlation_threshold)
+        features_after_correlation = len(X_correlation.select_dtypes(include=['number']).columns)
+
+        # Step 3: Select k best features
+        # Re-add target column for select_k_best
+        X_with_target = X_correlation.copy()
+        X_with_target[target] = y
+
+        # Adjust k if necessary
+        numeric_features = len(X_correlation.select_dtypes(include=['number']).columns)
+        k_adjusted = min(k, numeric_features)
+
+        if k_adjusted < k:
+            warnings.warn(
+                f"k ajusté de {k} à {k_adjusted} car seulement {numeric_features} features disponibles après filtrage.",
+                UserWarning,
+            )
+
+        X_final = self.select_k_best(X_with_target, target, k=k_adjusted, score_func=score_func)
+
+        # Pipeline summary
+        warnings.warn(
+            f"Pipeline de sélection terminé: {initial_features} features → "
+            f"{features_after_variance} (variance) → "
+            f"{features_after_correlation} (corrélation) → "
+            f"{len(X_final.columns)} (k-best)",
+            UserWarning,
+        )
+
+        return X_final
 
     def process_data(self, data):
         """
