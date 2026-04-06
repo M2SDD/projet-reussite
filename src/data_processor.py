@@ -22,6 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 import pandas as pd
 import warnings
+from scipy import stats
 
 from .config import Config
 
@@ -782,6 +783,103 @@ class DataProcessor:
         correlation_matrix = numeric_df.corr()
 
         return correlation_matrix
+
+    def test_feature_significance(self, df, target_column):
+        """
+        Teste la significativité statistique des corrélations entre features et cible.
+
+        Utilise le test de corrélation de Pearson pour calculer les p-values
+        de chaque feature par rapport à la variable cible. Une p-value faible
+        (typiquement < 0.05) indique une corrélation statistiquement significative.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target_column (str): Le nom de la colonne cible.
+
+        Returns:
+            pd.DataFrame: DataFrame avec colonnes :
+                - 'feature': nom de la feature
+                - 'correlation': coefficient de corrélation de Pearson
+                - 'p_value': p-value du test de significativité
+                - 'is_significant': True si p_value < 0.05
+                Trié par p-value croissante (features les plus significatives en premier).
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+            ValueError: Si la colonne cible n'est pas numérique.
+        """
+        if target_column not in df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame."
+            )
+
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        if target_column not in numeric_df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'est pas numérique."
+            )
+
+        # Get target values
+        target = numeric_df[target_column].dropna()
+
+        # Test each feature
+        results = []
+        for col in numeric_df.columns:
+            if col == target_column:
+                continue
+
+            # Get feature values aligned with target
+            feature = numeric_df[col]
+
+            # Align feature and target (drop NaN in either)
+            valid_indices = target.index.intersection(feature.dropna().index)
+            if len(valid_indices) < 3:
+                # Need at least 3 points for meaningful correlation
+                warnings.warn(
+                    f"Feature '{col}' a moins de 3 valeurs valides, test ignoré.",
+                    UserWarning,
+                )
+                continue
+
+            aligned_feature = feature.loc[valid_indices]
+            aligned_target = target.loc[valid_indices]
+
+            # Compute Pearson correlation and p-value
+            try:
+                correlation, p_value = stats.pearsonr(aligned_feature, aligned_target)
+                results.append({
+                    'feature': col,
+                    'correlation': round(correlation, 4),
+                    'p_value': round(p_value, 6),
+                    'is_significant': p_value < 0.05
+                })
+            except Exception as e:
+                warnings.warn(
+                    f"Erreur lors du test de '{col}': {str(e)}",
+                    UserWarning,
+                )
+                continue
+
+        # Create result DataFrame
+        result_df = pd.DataFrame(results)
+
+        if len(result_df) == 0:
+            warnings.warn(
+                "Aucune feature valide pour le test de significativité.",
+                UserWarning,
+            )
+            return pd.DataFrame(columns=['feature', 'correlation', 'p_value', 'is_significant'])
+
+        # Sort by p-value (most significant first)
+        result_df = result_df.sort_values('p_value').reset_index(drop=True)
+
+        return result_df
 
     def compute_descriptive_statistics(self, df):
         """
