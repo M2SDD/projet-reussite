@@ -35,7 +35,60 @@ except ImportError:
 # ----------------------------------------------------------------------------------------------------------------------
 class Config:
     """
-    Classe de configuration pour centraliser les paramètres de l'application
+    Classe responsable de la gestion centralisée de la configuration de l'application.
+
+    Cette classe fournit un point d'accès unique pour tous les paramètres de configuration,
+    incluant les chemins de fichiers, les seuils de validation, les paramètres ML/statistiques,
+    et les options de visualisation. Les paramètres peuvent être chargés depuis des fichiers
+    JSON ou YAML, et sont automatiquement validés à l'initialisation.
+
+    Attributes:
+        LOGS_FILE_PATH (str): Chemin vers le fichier CSV des logs
+        NOTES_FILE_PATH (str): Chemin vers le fichier CSV des notes
+        OUTPUT_DIR (str): Répertoire de sortie pour les fichiers générés
+        NOTE_MIN (int): Note minimale valide (système français: 0)
+        NOTE_MAX (int): Note maximale valide (système français: 20)
+        RISK_THRESHOLD_HIGH (int): Seuil de risque élevé (défaut: 10)
+        RISK_THRESHOLD_MEDIUM (int): Seuil de risque moyen (défaut: 12)
+        TRAIN_TEST_SPLIT_RATIO (float): Ratio de séparation train/test (défaut: 0.8)
+        CV_FOLDS (int): Nombre de plis pour la validation croisée (défaut: 5)
+        RANDOM_STATE (int): Graine aléatoire pour la reproductibilité (défaut: 42)
+        PLOT_DPI (int): Résolution des graphiques sauvegardés (défaut: 300)
+        PLOT_FIGSIZE (tuple): Taille par défaut des figures (largeur, hauteur) en pouces
+
+    Examples:
+        Utilisation avec la configuration par défaut:
+
+        >>> from src.config import Config
+        >>> config = Config()
+        >>> print(config.NOTE_MIN, config.NOTE_MAX)
+        0 20
+        >>> print(config.RISK_THRESHOLD_HIGH)
+        10
+
+        Chargement depuis un fichier JSON:
+
+        >>> config = Config(config_file='custom_config.json')
+        >>> # Les valeurs du fichier surchargent les valeurs par défaut
+
+        Chargement depuis un fichier YAML:
+
+        >>> config = Config(config_file='custom_config.yaml')
+        >>> # Nécessite PyYAML: pip install pyyaml
+
+        Accès aux paramètres de configuration:
+
+        >>> config = Config()
+        >>> data_loader = DataLoader(config.LOGS_FILE_PATH, config.NOTES_FILE_PATH)
+        >>> processor = DataProcessor(config)
+        >>> print(f"Seuil de risque: {config.RISK_THRESHOLD_HIGH}")
+
+        Export de la configuration actuelle:
+
+        >>> config = Config()
+        >>> config.PLOT_DPI = 600  # Modifier un paramètre
+        >>> config.export_defaults('my_config.json')
+        >>> # Sauvegarder la configuration personnalisée
     """
 
     # Data file paths
