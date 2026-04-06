@@ -269,77 +269,509 @@ class TestConfigParameterTypes:
 
 
 class TestConfigValidation:
-    """Test configuration parameter validation."""
+    """Test configuration parameter validation and error handling."""
 
     def test_validation_passes_with_defaults(self, config):
         """Test that default values pass validation."""
-        # If we got here without exception, validation passed
         assert config is not None
 
-    def test_validation_fails_with_invalid_split_ratio_too_high(self, temp_invalid_json_config):
-        """Test that validation fails when split ratio is >= 1."""
-        with pytest.raises(ValueError, match="TRAIN_TEST_SPLIT_RATIO"):
-            Config(config_file=temp_invalid_json_config)
+    def test_validation_train_test_split_ratio_too_high(self):
+        """Test that TRAIN_TEST_SPLIT_RATIO >= 1 raises ValueError."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 1.5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
 
-    def test_validation_fails_with_invalid_cv_folds(self):
-        """Test that validation fails when CV_FOLDS < 2."""
+        try:
+            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_train_test_split_ratio_too_low(self):
+        """Test that TRAIN_TEST_SPLIT_RATIO <= 0 raises ValueError."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.0}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_train_test_split_ratio_negative(self):
+        """Test that negative TRAIN_TEST_SPLIT_RATIO raises ValueError."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': -0.5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_train_test_split_ratio_equals_one(self):
+        """Test that TRAIN_TEST_SPLIT_RATIO == 1 raises ValueError."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 1.0}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_cv_folds_too_low(self):
+        """Test that CV_FOLDS < 2 raises ValueError."""
         config_data = {'CV_FOLDS': 1}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
+
         try:
-            with pytest.raises(ValueError, match="CV_FOLDS"):
+            with pytest.raises(ValueError, match='CV_FOLDS doit être au moins 2'):
                 Config(config_file=f.name)
         finally:
-            os.unlink(f.name)
+            if os.path.exists(f.name):
+                os.unlink(f.name)
 
-    def test_validation_fails_with_negative_dpi(self):
-        """Test that validation fails when PLOT_DPI <= 0."""
-        config_data = {'PLOT_DPI': -100}
+    def test_validation_cv_folds_zero(self):
+        """Test that CV_FOLDS = 0 raises ValueError."""
+        config_data = {'CV_FOLDS': 0}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
+
         try:
-            with pytest.raises(ValueError, match="PLOT_DPI"):
+            with pytest.raises(ValueError, match='CV_FOLDS doit être au moins 2'):
                 Config(config_file=f.name)
         finally:
-            os.unlink(f.name)
+            if os.path.exists(f.name):
+                os.unlink(f.name)
 
-    def test_validation_fails_with_invalid_note_range(self):
-        """Test that validation fails when NOTE_MIN >= NOTE_MAX."""
+    def test_validation_cv_folds_negative(self):
+        """Test that negative CV_FOLDS raises ValueError."""
+        config_data = {'CV_FOLDS': -5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='CV_FOLDS doit être au moins 2'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_note_min_greater_than_max(self):
+        """Test that NOTE_MIN >= NOTE_MAX raises ValueError."""
         config_data = {'NOTE_MIN': 20, 'NOTE_MAX': 10}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
+
         try:
-            with pytest.raises(ValueError, match="NOTE_MIN"):
+            with pytest.raises(ValueError, match='NOTE_MIN .* doit être inférieur à NOTE_MAX'):
                 Config(config_file=f.name)
         finally:
-            os.unlink(f.name)
+            if os.path.exists(f.name):
+                os.unlink(f.name)
 
-    def test_validation_fails_with_invalid_risk_threshold_ordering(self):
-        """Test that validation fails when RISK_THRESHOLD_HIGH >= RISK_THRESHOLD_MEDIUM."""
+    def test_validation_note_min_equal_to_max(self):
+        """Test that NOTE_MIN == NOTE_MAX raises ValueError."""
+        config_data = {'NOTE_MIN': 15, 'NOTE_MAX': 15}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='NOTE_MIN .* doit être inférieur à NOTE_MAX'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_plot_dpi_zero(self):
+        """Test that PLOT_DPI = 0 raises ValueError."""
+        config_data = {'PLOT_DPI': 0}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='PLOT_DPI doit être strictement positif'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_plot_dpi_negative(self):
+        """Test that negative PLOT_DPI raises ValueError."""
+        config_data = {'PLOT_DPI': -100}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='PLOT_DPI doit être strictement positif'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_risk_threshold_high_out_of_range_low(self):
+        """Test that RISK_THRESHOLD_HIGH below NOTE_MIN raises ValueError."""
+        config_data = {'RISK_THRESHOLD_HIGH': -5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='RISK_THRESHOLD_HIGH .* doit être dans la plage'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_risk_threshold_high_out_of_range_high(self):
+        """Test that RISK_THRESHOLD_HIGH above NOTE_MAX raises ValueError."""
+        config_data = {'RISK_THRESHOLD_HIGH': 25}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='RISK_THRESHOLD_HIGH .* doit être dans la plage'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_risk_threshold_medium_out_of_range(self):
+        """Test that RISK_THRESHOLD_MEDIUM outside range raises ValueError."""
+        config_data = {'RISK_THRESHOLD_MEDIUM': 25}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='RISK_THRESHOLD_MEDIUM .* doit être dans la plage'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_risk_thresholds_wrong_order(self):
+        """Test that RISK_THRESHOLD_HIGH >= RISK_THRESHOLD_MEDIUM raises ValueError."""
         config_data = {'RISK_THRESHOLD_HIGH': 15, 'RISK_THRESHOLD_MEDIUM': 10}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
+
         try:
-            with pytest.raises(ValueError, match="RISK_THRESHOLD_HIGH"):
+            with pytest.raises(ValueError, match='RISK_THRESHOLD_HIGH .* doit être inférieur à RISK_THRESHOLD_MEDIUM'):
                 Config(config_file=f.name)
         finally:
-            os.unlink(f.name)
+            if os.path.exists(f.name):
+                os.unlink(f.name)
 
-    def test_validation_fails_with_invalid_session_gap(self):
-        """Test that validation fails when SESSION_GAP_MINUTES <= 0."""
-        config_data = {'SESSION_GAP_MINUTES': -5}
+    def test_validation_risk_thresholds_equal(self):
+        """Test that RISK_THRESHOLD_HIGH == RISK_THRESHOLD_MEDIUM raises ValueError."""
+        config_data = {'RISK_THRESHOLD_HIGH': 12, 'RISK_THRESHOLD_MEDIUM': 12}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
+
         try:
-            with pytest.raises(ValueError, match="SESSION_GAP_MINUTES"):
+            with pytest.raises(ValueError, match='RISK_THRESHOLD_HIGH .* doit être inférieur à RISK_THRESHOLD_MEDIUM'):
                 Config(config_file=f.name)
         finally:
-            os.unlink(f.name)
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_session_gap_minutes_zero(self):
+        """Test that SESSION_GAP_MINUTES = 0 raises ValueError."""
+        config_data = {'SESSION_GAP_MINUTES': 0}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='SESSION_GAP_MINUTES doit être strictement positif'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_session_gap_minutes_negative(self):
+        """Test that negative SESSION_GAP_MINUTES raises ValueError."""
+        config_data = {'SESSION_GAP_MINUTES': -10}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='SESSION_GAP_MINUTES doit être strictement positif'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_train_test_split_ratio(self):
+        """Test that non-numeric TRAIN_TEST_SPLIT_RATIO raises TypeError."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 'invalid'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='TRAIN_TEST_SPLIT_RATIO doit être un nombre'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_cv_folds(self):
+        """Test that non-integer CV_FOLDS raises TypeError."""
+        config_data = {'CV_FOLDS': 5.5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='CV_FOLDS doit être un entier'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_random_state(self):
+        """Test that non-integer RANDOM_STATE raises TypeError."""
+        config_data = {'RANDOM_STATE': '42'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='RANDOM_STATE doit être un entier'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_plot_dpi(self):
+        """Test that non-integer PLOT_DPI raises TypeError."""
+        config_data = {'PLOT_DPI': 300.5}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='PLOT_DPI doit être un entier'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_logs_file_path(self):
+        """Test that non-string LOGS_FILE_PATH raises TypeError."""
+        config_data = {'LOGS_FILE_PATH': 123}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='LOGS_FILE_PATH doit être une chaîne'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_feature_hour_of_day(self):
+        """Test that non-boolean FEATURE_HOUR_OF_DAY raises TypeError."""
+        config_data = {'FEATURE_HOUR_OF_DAY': 'true'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='FEATURE_HOUR_OF_DAY doit être un booléen'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_plot_figsize(self):
+        """Test that non-tuple PLOT_FIGSIZE raises TypeError."""
+        config_data = {'PLOT_FIGSIZE': '(10, 6)'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='PLOT_FIGSIZE doit être un tuple'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_logs_column_mapping(self):
+        """Test that non-dict LOGS_COLUMN_MAPPING raises TypeError."""
+        config_data = {'LOGS_COLUMN_MAPPING': 'invalid'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='LOGS_COLUMN_MAPPING doit être un dictionnaire'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_type_error_feature_event_types(self):
+        """Test that non-list FEATURE_EVENT_TYPES raises TypeError."""
+        config_data = {'FEATURE_EVENT_TYPES': 'view,submit,forum'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='FEATURE_EVENT_TYPES doit être une liste'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_edge_case_train_test_split_boundary_low(self):
+        """Test boundary value just above 0 for TRAIN_TEST_SPLIT_RATIO."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.001}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.TRAIN_TEST_SPLIT_RATIO == 0.001
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_edge_case_train_test_split_boundary_high(self):
+        """Test boundary value just below 1 for TRAIN_TEST_SPLIT_RATIO."""
+        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.999}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.TRAIN_TEST_SPLIT_RATIO == 0.999
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_edge_case_cv_folds_minimum(self):
+        """Test minimum valid CV_FOLDS value."""
+        config_data = {'CV_FOLDS': 2}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.CV_FOLDS == 2
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_edge_case_risk_thresholds_at_boundaries(self):
+        """Test risk thresholds at note boundaries."""
+        config_data = {
+            'NOTE_MIN': 0,
+            'NOTE_MAX': 20,
+            'RISK_THRESHOLD_HIGH': 0,
+            'RISK_THRESHOLD_MEDIUM': 20
+        }
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.RISK_THRESHOLD_HIGH == 0
+            assert config.RISK_THRESHOLD_MEDIUM == 20
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_edge_case_session_gap_minimum(self):
+        """Test minimum valid SESSION_GAP_MINUTES value."""
+        config_data = {'SESSION_GAP_MINUTES': 1}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.SESSION_GAP_MINUTES == 1
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_multiple_errors_raises_first(self):
+        """Test that first validation error is raised when multiple errors exist."""
+        config_data = {
+            'TRAIN_TEST_SPLIT_RATIO': 'invalid',  # TypeError (checked first)
+            'CV_FOLDS': 1,  # ValueError
+            'PLOT_DPI': -100  # ValueError
+        }
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_valid_custom_configuration(self):
+        """Test that a valid custom configuration passes all validation."""
+        config_data = {
+            'TRAIN_TEST_SPLIT_RATIO': 0.75,
+            'CV_FOLDS': 10,
+            'PLOT_DPI': 600,
+            'RISK_THRESHOLD_HIGH': 8,
+            'RISK_THRESHOLD_MEDIUM': 13,
+            'SESSION_GAP_MINUTES': 45
+        }
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.TRAIN_TEST_SPLIT_RATIO == 0.75
+            assert config.CV_FOLDS == 10
+            assert config.PLOT_DPI == 600
+            assert config.RISK_THRESHOLD_HIGH == 8
+            assert config.RISK_THRESHOLD_MEDIUM == 13
+            assert config.SESSION_GAP_MINUTES == 45
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
 
 
 class TestConfigFileLoading:
