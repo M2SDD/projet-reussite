@@ -8,6 +8,7 @@ Tests cover:
 - Validation logic
 - Invalid parameter handling
 - Export functionality
+- Integration with other modules
 - Edge cases
 """
 
@@ -15,6 +16,7 @@ import pytest
 import json
 import tempfile
 import os
+import warnings
 from src.config import Config
 
 
@@ -865,3 +867,285 @@ class TestConfigExport:
             assert config2.CV_FOLDS == config.CV_FOLDS
         finally:
             os.unlink(f.name)
+
+    def test_export_includes_all_config_attributes(self, config):
+        """Test that export includes all non-private, non-callable attributes."""
+        f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        f.close()
+        try:
+            config.export_defaults(f.name)
+
+            with open(f.name, 'r', encoding='utf-8') as exported:
+                exported_data = json.load(exported)
+
+            # Verify key attributes are present
+            assert 'LOGS_FILE_PATH' in exported_data
+            assert 'NOTES_FILE_PATH' in exported_data
+            assert 'OUTPUT_DIR' in exported_data
+            assert 'TRAIN_TEST_SPLIT_RATIO' in exported_data
+            assert 'CV_FOLDS' in exported_data
+            assert 'RANDOM_STATE' in exported_data
+            assert 'NOTE_MIN' in exported_data
+            assert 'NOTE_MAX' in exported_data
+            assert 'RISK_THRESHOLD_HIGH' in exported_data
+            assert 'RISK_THRESHOLD_MEDIUM' in exported_data
+            assert 'PLOT_DPI' in exported_data
+            assert 'PLOT_FIGSIZE' in exported_data
+            assert 'FEATURE_HOUR_OF_DAY' in exported_data
+            assert 'LOGS_COLUMN_MAPPING' in exported_data
+            assert 'COMPOSANT_CATEGORIES' in exported_data
+        finally:
+            os.unlink(f.name)
+
+    def test_export_with_modified_values(self, config):
+        """Test that export correctly saves modified configuration values."""
+        # Modify some config values
+        config.PLOT_DPI = 600
+        config.TRAIN_TEST_SPLIT_RATIO = 0.75
+        config.CV_FOLDS = 10
+        config.RANDOM_STATE = 123
+
+        f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        f.close()
+        try:
+            config.export_defaults(f.name)
+
+            with open(f.name, 'r', encoding='utf-8') as exported:
+                exported_data = json.load(exported)
+
+            # Verify modified values are saved
+            assert exported_data['PLOT_DPI'] == 600
+            assert exported_data['TRAIN_TEST_SPLIT_RATIO'] == 0.75
+            assert exported_data['CV_FOLDS'] == 10
+            assert exported_data['RANDOM_STATE'] == 123
+        finally:
+            os.unlink(f.name)
+
+    def test_export_preserves_data_types(self, config):
+        """Test that export preserves different data types correctly."""
+        f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        f.close()
+        try:
+            config.export_defaults(f.name)
+
+            with open(f.name, 'r', encoding='utf-8') as exported:
+                exported_data = json.load(exported)
+
+            # Verify string types
+            assert isinstance(exported_data['LOGS_FILE_PATH'], str)
+            assert isinstance(exported_data['OUTPUT_DIR'], str)
+            assert isinstance(exported_data['DATETIME_FORMAT'], str)
+
+            # Verify numeric types
+            assert isinstance(exported_data['PLOT_DPI'], int)
+            assert isinstance(exported_data['CV_FOLDS'], int)
+            assert isinstance(exported_data['TRAIN_TEST_SPLIT_RATIO'], float)
+
+            # Verify boolean types
+            assert isinstance(exported_data['FEATURE_HOUR_OF_DAY'], bool)
+            assert isinstance(exported_data['FEATURE_DAY_OF_WEEK'], bool)
+
+            # Verify collection types
+            assert isinstance(exported_data['PLOT_FIGSIZE'], list)  # Tuple exported as list in JSON
+            assert isinstance(exported_data['FEATURE_EVENT_TYPES'], list)
+            assert isinstance(exported_data['LOGS_COLUMN_MAPPING'], dict)
+            assert isinstance(exported_data['COMPOSANT_CATEGORIES'], dict)
+        finally:
+            os.unlink(f.name)
+
+    def test_export_yaml_format_error_without_pyyaml(self, config):
+        """Test that exporting to YAML without PyYAML raises ImportError."""
+        f = tempfile.NamedTemporaryFile(suffix='.yaml', delete=False)
+        f.close()
+        try:
+            # Try to import yaml to check if it's available
+            try:
+                import yaml
+                pytest.skip("PyYAML is installed, skipping this test")
+            except ImportError:
+                # PyYAML not available, test should raise ImportError
+                with pytest.raises(ImportError, match='PyYAML'):
+                    config.export_defaults(f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_export_default_format_is_json(self, config):
+        """Test that export defaults to JSON format when extension is not recognized."""
+        f = tempfile.NamedTemporaryFile(suffix='.txt', delete=False)
+        f.close()
+        try:
+            config.export_defaults(f.name)
+            assert os.path.exists(f.name)
+
+            # Should be valid JSON
+            with open(f.name, 'r', encoding='utf-8') as exported:
+                exported_data = json.load(exported)
+
+            assert 'PLOT_DPI' in exported_data
+        finally:
+            os.unlink(f.name)
+
+
+class TestConfigIntegration:
+    """Test configuration integration with other modules."""
+
+    def test_config_with_data_processor(self):
+        """Test that Config integrates correctly with DataProcessor."""
+        from src.data_processor import DataProcessor
+
+        config = Config()
+        processor = DataProcessor(config=config)
+
+        # Verify processor uses the config
+        assert processor.config is config
+        assert processor.config.NOTE_MIN == config.NOTE_MIN
+        assert processor.config.NOTE_MAX == config.NOTE_MAX
+
+    def test_config_with_data_processor_custom_values(self):
+        """Test DataProcessor with custom Config values."""
+        from src.data_processor import DataProcessor
+
+        config = Config()
+        config.NOTE_MIN = 5
+        config.NOTE_MAX = 15
+
+        processor = DataProcessor(config=config)
+
+        # Verify custom values are used
+        assert processor.config.NOTE_MIN == 5
+        assert processor.config.NOTE_MAX == 15
+
+    def test_config_with_statistics_module(self):
+        """Test that Config integrates correctly with StatisticsModule."""
+        from src.statistics_module import StatisticsModule
+
+        config = Config()
+        stats_module = StatisticsModule(config=config)
+
+        # Verify stats module uses the config
+        assert stats_module.config is config
+        assert stats_module.config.RISK_THRESHOLD_HIGH == config.RISK_THRESHOLD_HIGH
+        assert stats_module.config.RISK_THRESHOLD_MEDIUM == config.RISK_THRESHOLD_MEDIUM
+
+    def test_config_with_statistics_module_custom_thresholds(self):
+        """Test StatisticsModule with custom Config threshold values."""
+        from src.statistics_module import StatisticsModule
+
+        config = Config()
+        config.RISK_THRESHOLD_HIGH = 8
+        config.RISK_THRESHOLD_MEDIUM = 11
+
+        stats_module = StatisticsModule(config=config)
+
+        # Verify custom thresholds are used
+        assert stats_module.config.RISK_THRESHOLD_HIGH == 8
+        assert stats_module.config.RISK_THRESHOLD_MEDIUM == 11
+
+    def test_multiple_modules_share_config(self):
+        """Test that multiple modules can share the same Config instance."""
+        from src.data_processor import DataProcessor
+        from src.statistics_module import StatisticsModule
+
+        config = Config()
+        config.RANDOM_STATE = 999
+
+        processor = DataProcessor(config=config)
+        stats_module = StatisticsModule(config=config)
+
+        # Verify both modules use the same config instance
+        assert processor.config is config
+        assert stats_module.config is config
+        assert processor.config.RANDOM_STATE == 999
+        assert stats_module.config.RANDOM_STATE == 999
+
+    def test_config_modification_affects_modules(self):
+        """Test that modifying Config affects modules that use it."""
+        from src.data_processor import DataProcessor
+
+        config = Config()
+        processor = DataProcessor(config=config)
+
+        # Modify config after processor creation
+        config.NOTE_MIN = 3
+        config.NOTE_MAX = 17
+
+        # Verify processor sees the changes
+        assert processor.config.NOTE_MIN == 3
+        assert processor.config.NOTE_MAX == 17
+
+    def test_config_export_and_module_integration(self):
+        """Test full workflow: export config, reload it, and use with modules."""
+        from src.data_processor import DataProcessor
+        import tempfile
+
+        # Create and modify config
+        config1 = Config()
+        config1.PLOT_DPI = 500
+        config1.TRAIN_TEST_SPLIT_RATIO = 0.85
+        config1.NOTE_MIN = 2
+        config1.NOTE_MAX = 18
+
+        # Export config
+        f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        f.close()
+        try:
+            config1.export_defaults(f.name)
+
+            # Reload config
+            config2 = Config(config_file=f.name)
+
+            # Use reloaded config with DataProcessor
+            processor = DataProcessor(config=config2)
+
+            # Verify processor uses reloaded values
+            assert processor.config.PLOT_DPI == 500
+            assert processor.config.TRAIN_TEST_SPLIT_RATIO == 0.85
+            assert processor.config.NOTE_MIN == 2
+            assert processor.config.NOTE_MAX == 18
+        finally:
+            os.unlink(f.name)
+
+    def test_config_with_real_data_processing(self):
+        """Test Config integration with real data processing workflow."""
+        from src.data_processor import DataProcessor
+        import pandas as pd
+
+        config = Config()
+        config.NOTE_MIN = 0
+        config.NOTE_MAX = 20
+
+        processor = DataProcessor(config=config)
+
+        # Create sample notes data
+        notes_df = pd.DataFrame({
+            'pseudo': [100, 101, 102],
+            'note': [15.0, -5.0, 25.0]  # Include out-of-range values
+        })
+
+        # Process notes (should clip based on config)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cleaned = processor.clean_notes(notes_df)
+
+        # Verify clipping used config values
+        assert cleaned['note'].min() >= config.NOTE_MIN
+        assert cleaned['note'].max() <= config.NOTE_MAX
+
+    def test_config_isolation_between_instances(self):
+        """Test that different Config instances are isolated from each other."""
+        from src.data_processor import DataProcessor
+
+        config1 = Config()
+        config1.NOTE_MIN = 5
+
+        config2 = Config()
+        config2.NOTE_MIN = 0
+
+        processor1 = DataProcessor(config=config1)
+        processor2 = DataProcessor(config=config2)
+
+        # Verify each processor uses its own config
+        assert processor1.config.NOTE_MIN == 5
+        assert processor2.config.NOTE_MIN == 0
+        assert processor1.config is not processor2.config
