@@ -20,7 +20,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from src import Config, DataLoader, DataProcessor, Visualizer
+from src import Config, DataLoader, DataProcessor, StatisticsModule, Visualizer
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -41,6 +41,7 @@ if __name__ == '__main__':
     # Initialisation des composants principaux
     data_loader = DataLoader()
     data_processor = DataProcessor()
+    statistics_module = StatisticsModule()
     visualizer = Visualizer()
 
     # Vérification de l'architecture OOP
@@ -48,6 +49,7 @@ if __name__ == '__main__':
     print(f"✓ Config: {type(config).__name__}")
     print(f"✓ DataLoader: {type(data_loader).__name__}")
     print(f"✓ DataProcessor: {type(data_processor).__name__}")
+    print(f"✓ StatisticsModule: {type(statistics_module).__name__}")
     print(f"✓ Visualizer: {type(visualizer).__name__}")
     print()
 
@@ -164,4 +166,25 @@ if __name__ == '__main__':
         print(f"  - Avg component diversity: {engagement_df['component_diversity'].mean():.2f}")
     if 'weekend_activity_ratio' in engagement_df.columns:
         print(f"  - Avg weekend activity ratio: {engagement_df['weekend_activity_ratio'].mean():.2f}")
+    print()
+
+    # --------------------------------------------------------------------------
+    # Descriptive Statistics Analysis
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Descriptive Statistics Analysis")
+    print("=" * 60)
+    print()
+
+    # Generate comprehensive statistics report for student dataset
+    print("Generating descriptive statistics report for student dataset...")
+    stats = StatisticsModule(config=config)
+    student_report = stats.generate_report(student_df)
+    print(student_report)
+    print()
+
+    # Generate statistics report for engagement features
+    print("Generating descriptive statistics report for engagement features...")
+    engagement_report = stats.generate_report(engagement_df)
+    print(engagement_report)
     print()
