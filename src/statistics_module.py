@@ -316,3 +316,152 @@ class StatisticsModule:
             dict: Dictionnaire contenant toutes les statistiques calculées.
         """
         pass
+
+    def generate_report(self, df):
+        """
+        Génère un rapport texte complet des statistiques descriptives.
+
+        Produit un rapport formaté en texte contenant :
+        - Résumé des données (dimensions, types, mémoire)
+        - Statistiques descriptives pour chaque colonne numérique
+        - Caractéristiques de distribution (asymétrie, aplatissement)
+        - Détection des valeurs aberrantes
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à analyser.
+
+        Returns:
+            str: Rapport formaté en texte avec toutes les statistiques calculées.
+        """
+        lines = []
+        lines.append("=" * 80)
+        lines.append("RAPPORT STATISTIQUE DESCRIPTIF")
+        lines.append("=" * 80)
+        lines.append("")
+
+        # Section 1: Résumé des données
+        lines.append("-" * 80)
+        lines.append("1. RÉSUMÉ DES DONNÉES")
+        lines.append("-" * 80)
+
+        data_summary = self.compute_data_summary(df)
+        lines.append(f"Nombre de lignes      : {data_summary['total_rows']}")
+        lines.append(f"Nombre de colonnes    : {data_summary['total_columns']}")
+        lines.append(f"Utilisation mémoire   : {data_summary['memory_usage_mb']} MB")
+        lines.append("")
+
+        lines.append("Types de colonnes :")
+        for dtype, count in data_summary['column_types'].items():
+            lines.append(f"  - {dtype}: {count} colonne(s)")
+        lines.append("")
+
+        missing = data_summary['missing_values']
+        lines.append(f"Valeurs manquantes    : {missing['total']} total")
+        if missing['total'] > 0:
+            lines.append("Détail par colonne :")
+            for col, count in missing['by_column'].items():
+                if count > 0:
+                    lines.append(f"  - {col}: {count}")
+        lines.append("")
+
+        # Section plage de dates (si applicable)
+        if 'date_range' in data_summary:
+            lines.append("Plage de dates :")
+            for col, date_info in data_summary['date_range'].items():
+                lines.append(f"  - {col}:")
+                lines.append(f"    Min  : {date_info['min']}")
+                lines.append(f"    Max  : {date_info['max']}")
+                lines.append(f"    Durée: {date_info['range_days']} jours")
+            lines.append("")
+
+        # Section 2: Statistiques descriptives
+        lines.append("-" * 80)
+        lines.append("2. STATISTIQUES DESCRIPTIVES")
+        lines.append("-" * 80)
+
+        summary_stats = self.compute_summary_statistics(df)
+
+        if summary_stats:
+            # Obtenir toutes les colonnes numériques
+            numeric_cols = list(summary_stats['count'].keys())
+
+            for col in numeric_cols:
+                lines.append(f"\nColonne: {col}")
+                lines.append(f"  Nombre d'observations : {summary_stats['count'][col]}")
+                lines.append(f"  Moyenne               : {summary_stats['mean'][col]:.4f}")
+                lines.append(f"  Médiane               : {summary_stats['median'][col]:.4f}")
+                lines.append(f"  Écart-type            : {summary_stats['std'][col]:.4f}")
+                lines.append(f"  Variance              : {summary_stats['variance'][col]:.4f}")
+                lines.append(f"  Minimum               : {summary_stats['min'][col]:.4f}")
+                lines.append(f"  Maximum               : {summary_stats['max'][col]:.4f}")
+                lines.append(f"  Étendue               : {summary_stats['range'][col]:.4f}")
+                lines.append(f"  Q1 (25%)              : {summary_stats['q25'][col]:.4f}")
+                lines.append(f"  Q2 (50%)              : {summary_stats['q50'][col]:.4f}")
+                lines.append(f"  Q3 (75%)              : {summary_stats['q75'][col]:.4f}")
+        else:
+            lines.append("\nAucune colonne numérique disponible pour les statistiques.")
+        lines.append("")
+
+        # Section 3: Caractéristiques de distribution
+        lines.append("-" * 80)
+        lines.append("3. CARACTÉRISTIQUES DE DISTRIBUTION")
+        lines.append("-" * 80)
+
+        distribution = self.characterize_distribution(df)
+
+        if distribution:
+            for col in distribution['skewness'].keys():
+                lines.append(f"\nColonne: {col}")
+                skew = distribution['skewness'][col]
+                kurt = distribution['kurtosis'][col]
+                lines.append(f"  Asymétrie (Skewness)  : {skew:.4f}")
+
+                # Interprétation de l'asymétrie
+                if abs(skew) < 0.5:
+                    skew_interp = "Distribution symétrique"
+                elif skew > 0:
+                    skew_interp = "Distribution asymétrique à droite (queue à droite)"
+                else:
+                    skew_interp = "Distribution asymétrique à gauche (queue à gauche)"
+                lines.append(f"    → {skew_interp}")
+
+                lines.append(f"  Aplatissement (Kurtosis): {kurt:.4f}")
+
+                # Interprétation du kurtosis
+                if kurt > 0:
+                    kurt_interp = "Distribution leptokurtique (plus pointue)"
+                elif kurt < 0:
+                    kurt_interp = "Distribution platykurtique (plus plate)"
+                else:
+                    kurt_interp = "Distribution mésokurtique (normale)"
+                lines.append(f"    → {kurt_interp}")
+        else:
+            lines.append("\nAucune colonne numérique disponible pour l'analyse de distribution.")
+        lines.append("")
+
+        # Section 4: Détection des valeurs aberrantes
+        lines.append("-" * 80)
+        lines.append("4. DÉTECTION DES VALEURS ABERRANTES (Méthode IQR)")
+        lines.append("-" * 80)
+
+        outliers_df = self.detect_outliers(df)
+        numeric_cols_outliers = outliers_df.select_dtypes(include=[bool]).columns
+
+        if len(numeric_cols_outliers) > 0:
+            lines.append("")
+            for col in numeric_cols_outliers:
+                outlier_count = outliers_df[col].sum()
+                outlier_pct = (outlier_count / len(df) * 100) if len(df) > 0 else 0
+                lines.append(f"Colonne: {col}")
+                lines.append(f"  Nombre d'outliers     : {outlier_count}")
+                lines.append(f"  Pourcentage           : {outlier_pct:.2f}%")
+        else:
+            lines.append("\nAucune colonne numérique disponible pour la détection d'outliers.")
+        lines.append("")
+
+        # Pied de page
+        lines.append("=" * 80)
+        lines.append("FIN DU RAPPORT")
+        lines.append("=" * 80)
+
+        return "\n".join(lines)
