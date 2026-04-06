@@ -974,6 +974,71 @@ class DataProcessor:
 
         return result
 
+    def select_by_correlation(self, df, threshold=0.95):
+        """
+        Sélectionne les features en éliminant celles fortement corrélées entre elles.
+
+        Cette méthode de sélection de features identifie et supprime les features
+        redondantes en calculant la matrice de corrélation. Lorsque deux features
+        ont une corrélation (en valeur absolue) supérieure au seuil, l'une d'elles
+        est supprimée pour réduire la multicolinéarité.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à filtrer.
+            threshold (float): Le seuil de corrélation (en valeur absolue). Les paires
+                de features avec une corrélation |r| > threshold seront réduites en
+                ne gardant qu'une seule feature. Par défaut 0.95.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les features sélectionnées.
+                Les colonnes non numériques sont préservées dans le résultat.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select numeric and non-numeric columns separately
+        numeric_df = df.select_dtypes(include=['number'])
+        non_numeric_df = df.select_dtypes(exclude=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute correlation matrix
+        corr_matrix = numeric_df.corr().abs()
+
+        # Find features with correlation greater than threshold
+        to_drop = set()
+        columns = corr_matrix.columns
+
+        # Iterate through the correlation matrix
+        for i in range(len(columns)):
+            for j in range(i + 1, len(columns)):
+                if corr_matrix.iloc[i, j] > threshold:
+                    # Add the second column to the drop list
+                    to_drop.add(columns[j])
+
+        # Keep only columns not in to_drop
+        selected_columns = [col for col in numeric_df.columns if col not in to_drop]
+        removed_count = len(to_drop)
+
+        if removed_count > 0:
+            removed_cols = list(to_drop)
+            warnings.warn(
+                f"{removed_count} colonnes fortement corrélées (|r| > {threshold}) ont été supprimées: {removed_cols}",
+                UserWarning,
+            )
+
+        # Filter numeric columns and combine with non-numeric columns
+        filtered_numeric = numeric_df[selected_columns]
+
+        # Combine non-numeric columns with filtered numeric columns
+        if len(non_numeric_df.columns) > 0:
+            result = pd.concat([non_numeric_df, filtered_numeric], axis=1)
+        else:
+            result = filtered_numeric
+
+        return result
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
