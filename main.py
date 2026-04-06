@@ -113,3 +113,55 @@ if __name__ == '__main__':
     print()
     print("Sample student data:")
     print(student_df.head(5))
+    print()
+
+    # --------------------------------------------------------------------------
+    # Engagement Feature Engineering
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Engagement Feature Engineering")
+    print("=" * 60)
+    print()
+
+    # Build comprehensive engagement features
+    print("Computing engagement features from student activity logs...")
+    engagement_df = processor.build_engagement_features(logs_df)
+    print("Engagement features computed successfully")
+    print()
+
+    # Display engagement feature categories
+    print("Engagement Feature Categories:")
+    print("  - Activity Metrics: total_actions, unique_days_active, actions_per_day, session_count")
+    print("  - Component Features: comp_* (interactions per component)")
+    print("  - Event Type Features: *_count (views, submissions, forum, quiz, downloads)")
+    print("  - Consistency Metrics: streak_days, avg_gap_days, std_gap_days, study_frequency")
+    print("  - Interaction Depth: component_diversity, context_diversity, avg_interactions_per_component, component_switch_rate")
+    print("  - Temporal Patterns: peak_hour, morning/afternoon/evening/night_activity, weekend_activity_ratio")
+    print()
+
+    # Display engagement statistics
+    print(f"Total students with engagement features: {len(engagement_df)}")
+    print(f"Total engagement features: {len(engagement_df.columns) - 1}")  # -1 for pseudo column
+    print()
+
+    # Display sample engagement features
+    print("Sample engagement features (first 3 students):")
+    display_cols = ['pseudo', 'total_actions', 'unique_days_active', 'actions_per_day',
+                    'session_count', 'component_diversity', 'peak_hour', 'weekend_activity_ratio']
+    available_cols = [col for col in display_cols if col in engagement_df.columns]
+    print(engagement_df[available_cols].head(3))
+    print()
+
+    # Display engagement summary statistics
+    print("Engagement Metrics Summary:")
+    if 'total_actions' in engagement_df.columns:
+        print(f"  - Avg total actions: {engagement_df['total_actions'].mean():.2f}")
+    if 'unique_days_active' in engagement_df.columns:
+        print(f"  - Avg unique days active: {engagement_df['unique_days_active'].mean():.2f}")
+    if 'actions_per_day' in engagement_df.columns:
+        print(f"  - Avg actions per day: {engagement_df['actions_per_day'].mean():.2f}")
+    if 'component_diversity' in engagement_df.columns:
+        print(f"  - Avg component diversity: {engagement_df['component_diversity'].mean():.2f}")
+    if 'weekend_activity_ratio' in engagement_df.columns:
+        print(f"  - Avg weekend activity ratio: {engagement_df['weekend_activity_ratio'].mean():.2f}")
+    print()
