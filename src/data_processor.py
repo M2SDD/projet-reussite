@@ -693,6 +693,96 @@ class DataProcessor:
         """
         return dict(self._cleaning_report)
 
+    def compute_feature_correlations(self, df, target_column):
+        """
+        Calcule les corrélations entre toutes les features numériques et une colonne cible.
+
+        Utilise la corrélation de Pearson pour mesurer les relations linéaires
+        entre chaque feature et la variable cible.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target_column (str): Le nom de la colonne cible.
+
+        Returns:
+            pd.Series: Série contenant les corrélations de chaque feature avec la cible.
+                Les features sont triées par valeur absolue de corrélation décroissante.
+                L'index contient les noms des features (excluant la cible elle-même).
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        if target_column not in df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame."
+            )
+
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        if target_column not in numeric_df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'est pas numérique."
+            )
+
+        # Compute correlations with target
+        correlations = numeric_df.corr()[target_column]
+
+        # Remove the target column from results
+        correlations = correlations.drop(target_column)
+
+        # Sort by absolute correlation value (descending)
+        correlations = correlations.reindex(
+            correlations.abs().sort_values(ascending=False).index
+        )
+
+        return correlations
+
+    def compute_feature_feature_correlations(self, df, exclude_columns=None):
+        """
+        Calcule la matrice de corrélation complète entre toutes les features numériques.
+
+        Utilise la corrélation de Pearson pour mesurer les relations linéaires
+        entre toutes les paires de features. Utile pour détecter la multicolinéarité.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features.
+            exclude_columns (list): Liste optionnelle de colonnes à exclure de l'analyse
+                (par exemple, ['pseudo', 'note']).
+
+        Returns:
+            pd.DataFrame: Matrice de corrélation (n_features x n_features).
+                Les valeurs sont comprises entre -1 (corrélation négative parfaite)
+                et +1 (corrélation positive parfaite).
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Exclude specified columns if provided
+        if exclude_columns is not None:
+            exclude_columns = [col for col in exclude_columns if col in numeric_df.columns]
+            numeric_df = numeric_df.drop(columns=exclude_columns)
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError(
+                "Aucune colonne numérique restante après exclusion."
+            )
+
+        # Compute full correlation matrix
+        correlation_matrix = numeric_df.corr()
+
+        return correlation_matrix
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
