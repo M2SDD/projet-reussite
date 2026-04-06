@@ -697,8 +697,184 @@ class TestCharacterizeDistribution:
 
 class TestComputeDataSummary:
     """Test compute_data_summary functionality."""
-    # Tests will be implemented in subtask-2-5
-    pass
+
+    def test_compute_data_summary_basic_structure(self, stats_module, sample_numeric_df):
+        """Test that compute_data_summary returns correct structure."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        # Verify it's a dictionary
+        assert isinstance(result, dict)
+
+        # Verify required keys are present
+        required_keys = ['total_rows', 'total_columns', 'column_types', 'missing_values', 'memory_usage_mb']
+        for key in required_keys:
+            assert key in result
+
+    def test_compute_data_summary_dimensions(self, stats_module, sample_numeric_df):
+        """Test that dimensions are computed correctly."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        assert result['total_rows'] == 10
+        assert result['total_columns'] == 3
+
+    def test_compute_data_summary_column_types(self, stats_module, sample_numeric_df):
+        """Test that column types are analyzed correctly."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        # Verify column_types is a dictionary
+        assert isinstance(result['column_types'], dict)
+
+        # Verify all columns are counted
+        total_cols = sum(result['column_types'].values())
+        assert total_cols == 3
+
+    def test_compute_data_summary_mixed_types(self, stats_module, sample_mixed_df):
+        """Test that mixed data types are correctly identified."""
+        result = stats_module.compute_data_summary(sample_mixed_df)
+
+        assert result['total_rows'] == 5
+        assert result['total_columns'] == 4
+
+        # Verify different types are present
+        assert isinstance(result['column_types'], dict)
+        assert len(result['column_types']) >= 2  # At least numeric and object types
+
+    def test_compute_data_summary_missing_values_none(self, stats_module, sample_numeric_df):
+        """Test missing values analysis when there are no missing values."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        assert 'missing_values' in result
+        assert result['missing_values']['total'] == 0
+        assert isinstance(result['missing_values']['by_column'], dict)
+
+    def test_compute_data_summary_missing_values_present(self, stats_module, df_with_missing):
+        """Test missing values analysis when missing values are present."""
+        result = stats_module.compute_data_summary(df_with_missing)
+
+        # There should be 3 missing values total (1 in col1, 2 in col2)
+        assert result['missing_values']['total'] == 3
+
+        # Check by_column counts
+        assert result['missing_values']['by_column']['col1'] == 1
+        assert result['missing_values']['by_column']['col2'] == 2
+
+    def test_compute_data_summary_memory_usage(self, stats_module, sample_numeric_df):
+        """Test that memory usage is computed and is a non-negative number."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        assert 'memory_usage_mb' in result
+        assert isinstance(result['memory_usage_mb'], float)
+        assert result['memory_usage_mb'] >= 0
+
+    def test_compute_data_summary_datetime_columns(self, stats_module, sample_mixed_df):
+        """Test date range analysis when datetime columns are present."""
+        result = stats_module.compute_data_summary(sample_mixed_df)
+
+        # Should have date_range key because sample_mixed_df has 'heure' datetime column
+        assert 'date_range' in result
+        assert isinstance(result['date_range'], dict)
+
+        # Check the 'heure' column date range
+        assert 'heure' in result['date_range']
+        date_info = result['date_range']['heure']
+
+        assert 'min' in date_info
+        assert 'max' in date_info
+        assert 'range_days' in date_info
+
+        # Verify the date range is correct (5 days from 2024-01-15 to 2024-01-19)
+        assert date_info['range_days'] == 4
+
+    def test_compute_data_summary_no_datetime_columns(self, stats_module, sample_numeric_df):
+        """Test that date_range is not present when there are no datetime columns."""
+        result = stats_module.compute_data_summary(sample_numeric_df)
+
+        # Should not have date_range key
+        assert 'date_range' not in result
+
+    def test_compute_data_summary_empty_dataframe(self, stats_module, empty_df):
+        """Test compute_data_summary on an empty DataFrame."""
+        result = stats_module.compute_data_summary(empty_df)
+
+        assert result['total_rows'] == 0
+        assert result['total_columns'] == 0
+        assert result['missing_values']['total'] == 0
+        assert result['memory_usage_mb'] >= 0
+
+    def test_compute_data_summary_single_row(self, stats_module, single_row_df):
+        """Test compute_data_summary on a single-row DataFrame."""
+        result = stats_module.compute_data_summary(single_row_df)
+
+        assert result['total_rows'] == 1
+        assert result['total_columns'] == 1
+        assert result['missing_values']['total'] == 0
+
+    def test_compute_data_summary_non_numeric(self, stats_module, non_numeric_df):
+        """Test compute_data_summary on a DataFrame with only non-numeric columns."""
+        result = stats_module.compute_data_summary(non_numeric_df)
+
+        assert result['total_rows'] == 3
+        assert result['total_columns'] == 2
+        assert 'date_range' not in result  # No datetime columns
+
+        # Should still have column types
+        assert isinstance(result['column_types'], dict)
+
+    def test_compute_data_summary_datetime_with_missing(self, stats_module):
+        """Test date range calculation when datetime column has missing values."""
+        df = pd.DataFrame({
+            'date': pd.to_datetime([
+                '2024-01-01',
+                pd.NaT,
+                '2024-01-10',
+                pd.NaT,
+                '2024-01-05',
+            ]),
+            'value': [1, 2, 3, 4, 5],
+        })
+
+        result = stats_module.compute_data_summary(df)
+
+        # Should have date_range
+        assert 'date_range' in result
+        assert 'date' in result['date_range']
+
+        # Should compute range from non-null dates only
+        date_info = result['date_range']['date']
+        assert date_info['range_days'] == 9  # 2024-01-01 to 2024-01-10
+
+    def test_compute_data_summary_datetime_all_missing(self, stats_module):
+        """Test date range when all datetime values are missing."""
+        df = pd.DataFrame({
+            'date': pd.to_datetime([pd.NaT, pd.NaT, pd.NaT]),
+            'value': [1, 2, 3],
+        })
+
+        result = stats_module.compute_data_summary(df)
+
+        # Should not have date_range if all dates are null
+        if 'date_range' in result:
+            # Or date_range should be empty or not include 'date' column
+            assert 'date' not in result.get('date_range', {})
+
+    def test_compute_data_summary_multiple_datetime_columns(self, stats_module):
+        """Test date range with multiple datetime columns."""
+        df = pd.DataFrame({
+            'start_date': pd.to_datetime(['2024-01-01', '2024-01-05', '2024-01-10']),
+            'end_date': pd.to_datetime(['2024-02-01', '2024-02-05', '2024-02-10']),
+            'value': [1, 2, 3],
+        })
+
+        result = stats_module.compute_data_summary(df)
+
+        # Should have date_range with both columns
+        assert 'date_range' in result
+        assert 'start_date' in result['date_range']
+        assert 'end_date' in result['date_range']
+
+        # Check individual ranges
+        assert result['date_range']['start_date']['range_days'] == 9
+        assert result['date_range']['end_date']['range_days'] == 9
 
 
 class TestGenerateReport:
