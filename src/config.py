@@ -111,7 +111,7 @@ class Config:
     RANDOM_STATE = 42  # Random seed for reproducibility
 
     # Visualization and plotting parameters
-    PLOT_DPI = 100  # Resolution for saved plots
+    PLOT_DPI = 300  # Resolution for saved plots
     PLOT_FIGSIZE = (10, 6)  # Default figure size (width, height) in inches
     PLOT_STYLE = 'seaborn-v0_8'  # Matplotlib style
     PLOT_COLOR_PALETTE = 'Set2'  # Default color palette
@@ -128,23 +128,27 @@ class Config:
                                          Formats supportés: .json, .yaml, .yml
         """
         if config_file is not None:
-            _, ext = os.path.splitext(config_file)
-            ext = ext.lower()
+            try:
+                _, ext = os.path.splitext(config_file)
+                ext = ext.lower()
 
-            with open(config_file, 'r', encoding='utf-8') as f:
-                if ext in ['.yaml', '.yml']:
-                    if not YAML_AVAILABLE:
-                        raise ImportError(
-                            "PyYAML n'est pas installé. "
-                            "Installez-le avec: pip install pyyaml"
-                        )
-                    config_data = yaml.safe_load(f)
-                elif ext == '.json':
-                    config_data = json.load(f)
-                else:
-                    # Default to JSON for backwards compatibility
-                    config_data = json.load(f)
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    if ext in ['.yaml', '.yml']:
+                        if not YAML_AVAILABLE:
+                            raise ImportError(
+                                "PyYAML n'est pas installé. "
+                                "Installez-le avec: pip install pyyaml"
+                            )
+                        config_data = yaml.safe_load(f)
+                    elif ext == '.json':
+                        config_data = json.load(f)
+                    else:
+                        # Default to JSON for backwards compatibility
+                        config_data = json.load(f)
 
-            # Override class attributes with values from config file
-            for key, value in config_data.items():
-                setattr(self, key, value)
+                # Override class attributes with values from config file
+                for key, value in config_data.items():
+                    setattr(self, key, value)
+            except FileNotFoundError:
+                # Gracefully fallback to defaults if config file is missing
+                pass
