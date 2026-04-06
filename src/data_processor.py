@@ -783,6 +783,44 @@ class DataProcessor:
 
         return correlation_matrix
 
+    def compute_descriptive_statistics(self, df):
+        """
+        Calcule les statistiques descriptives pour toutes les features numériques.
+
+        Calcule les statistiques suivantes pour chaque colonne numérique :
+        - count: nombre de valeurs non manquantes
+        - mean: moyenne
+        - std: écart-type
+        - min: valeur minimale
+        - 25%: premier quartile
+        - 50%: médiane
+        - 75%: troisième quartile
+        - max: valeur maximale
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features à analyser.
+
+        Returns:
+            pd.DataFrame: DataFrame avec les features en lignes et les statistiques en colonnes.
+                Chaque ligne représente une feature, chaque colonne une statistique.
+
+        Raises:
+            ValueError: Si le DataFrame ne contient pas de colonnes numériques.
+        """
+        # Select only numeric columns
+        numeric_df = df.select_dtypes(include=['number'])
+
+        if len(numeric_df.columns) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique.")
+
+        # Compute descriptive statistics
+        stats = numeric_df.describe()
+
+        # Transpose to have features as rows and statistics as columns
+        stats_transposed = stats.T
+
+        return stats_transposed
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
