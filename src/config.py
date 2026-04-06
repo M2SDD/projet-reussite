@@ -30,6 +30,11 @@ class Config:
     Classe de configuration pour centraliser les paramètres de l'application
     """
 
+    # Data file paths
+    LOGS_FILE_PATH = 'data/logs.csv'
+    NOTES_FILE_PATH = 'data/notes.csv'
+    OUTPUT_DIR = 'output'
+
     # Note range validation bounds (French grading system)
     NOTE_MIN = 0
     NOTE_MAX = 20
