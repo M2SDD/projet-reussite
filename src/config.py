@@ -61,6 +61,10 @@ class Config:
     FEATURE_SESSION_COUNT = True
     FEATURE_TOTAL_EVENTS = True
 
+    # Engagement feature settings
+    SESSION_GAP_MINUTES = 30  # Time gap to define new session
+    FEATURE_EVENT_TYPES = ['view', 'submit', 'forum']  # Event types for engagement tracking
+
     # Composant category mappings
     COMPOSANT_CATEGORIES = {
         'Système': 'system',
