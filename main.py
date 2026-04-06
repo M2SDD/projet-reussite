@@ -169,6 +169,118 @@ if __name__ == '__main__':
     print()
 
     # --------------------------------------------------------------------------
+    # Statistical Analysis
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Statistical Analysis")
+    print("=" * 60)
+    print()
+
+    # Merge engagement features with student data for analysis
+    print("Merging engagement features with student grades...")
+    analysis_df = student_df.merge(engagement_df, on='pseudo', how='inner')
+    print(f"Analysis dataset created: {analysis_df.shape[0]} students, {analysis_df.shape[1]} features")
+    print()
+
+    # Compute feature correlations with target (note)
+    print("Computing feature correlations with target variable (note)...")
+    feature_correlations = processor.compute_feature_correlations(analysis_df, target_column='note')
+    print("Top 10 features most correlated with final grade:")
+    print(feature_correlations.abs().sort_values(ascending=False).head(10))
+    print()
+
+    # Compute descriptive statistics for all features
+    print("Computing descriptive statistics for engagement features...")
+    engagement_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note', 'note_binaire']]
+    descriptive_stats = processor.compute_descriptive_statistics(analysis_df[engagement_cols])
+    print("Descriptive statistics summary (first 5 features):")
+    print(descriptive_stats.head(5))
+    print()
+
+    # Test statistical significance of features
+    print("Testing statistical significance of features...")
+    significance_results = processor.test_feature_significance(analysis_df, target_column='note')
+    print("Features with significant correlation (p < 0.05):")
+    significant_features = significance_results[significance_results['p_value'] < 0.05].sort_values('p_value')
+    print(f"  - Total significant features: {len(significant_features)}/{len(significance_results)}")
+    print("  - Top 5 most significant features:")
+    print(significant_features.head(5)[['correlation', 'p_value', 'is_significant']])
+    print()
+
+    # Compute correlation matrix for multicollinearity check
+    print("Computing feature correlation matrix for multicollinearity analysis...")
+    correlation_matrix = processor.compute_feature_feature_correlations(analysis_df[engagement_cols[:10]])  # Limit to first 10 for display
+    print("Sample correlation matrix (first 10 features):")
+    print(correlation_matrix)
+    print()
+
+    print("Statistical analysis completed successfully")
+    print()
+
+    # --------------------------------------------------------------------------
+    # Feature Selection
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Feature Selection")
+    print("=" * 60)
+    print()
+
+    # Prepare data for feature selection (exclude target and ID columns)
+    feature_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note', 'note_binaire']]
+    features_df = analysis_df[feature_cols + ['note']].copy()
+
+    # Fill NaN values with 0 (missing engagement features mean no activity)
+    features_df = features_df.fillna(0)
+
+    print(f"Starting feature selection with {len(feature_cols)} features...")
+    print()
+
+    # Step 1: Variance-based selection
+    print("Step 1: Removing low-variance features...")
+    variance_filtered_df = processor.select_by_variance(features_df, threshold=0.01)
+    variance_removed = len(feature_cols) - (len(variance_filtered_df.columns) - 1)  # -1 for note column
+    print(f"  - Features removed: {variance_removed}")
+    print(f"  - Features remaining: {len(variance_filtered_df.columns) - 1}")
+    print()
+
+    # Step 2: Correlation-based selection
+    print("Step 2: Removing highly correlated features...")
+    correlation_filtered_df = processor.select_by_correlation(variance_filtered_df, threshold=0.90)
+    correlation_removed = (len(variance_filtered_df.columns) - 1) - (len(correlation_filtered_df.columns) - 1)
+    print(f"  - Features removed: {correlation_removed}")
+    print(f"  - Features remaining: {len(correlation_filtered_df.columns) - 1}")
+    print()
+
+    # Step 3: SelectKBest for top features
+    # Get remaining feature columns (exclude 'note' if it's still in the dataframe)
+    remaining_features = [col for col in correlation_filtered_df.columns if col != 'note']
+    k_features = min(15, len(remaining_features))  # Ensure k doesn't exceed available features
+    print(f"Step 3: Selecting top {k_features} features using statistical tests...")
+
+    # Prepare data for select_k_best: features + note
+    selectkbest_df = correlation_filtered_df[remaining_features + ['note']].copy()
+    best_features_df = processor.select_k_best(
+        selectkbest_df,
+        target='note',
+        k=k_features
+    )
+    print(f"  - Features selected: {len(best_features_df.columns)}")
+    print(f"  - Selected features: {', '.join(best_features_df.columns.tolist())}")
+    print()
+
+    # Display final feature selection summary
+    print("Feature Selection Summary:")
+    print(f"  - Initial features: {len(feature_cols)}")
+    print(f"  - After variance filter: {len(variance_filtered_df.columns) - 1}")
+    print(f"  - After correlation filter: {len(remaining_features)}")
+    print(f"  - Final selected features: {len(best_features_df.columns)}")
+    print(f"  - Reduction rate: {((len(feature_cols) - len(best_features_df.columns)) / len(feature_cols) * 100):.1f}%")
+    print()
+
+    print("Feature selection completed successfully")
+    print()
+
+    # --------------------------------------------------------------------------
     # Descriptive Statistics Analysis
     # --------------------------------------------------------------------------
     print("=" * 60)
