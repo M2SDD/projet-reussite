@@ -93,6 +93,11 @@ class Config:
         'Message créé': 'forum',
     }
 
+    # ML/Statistical analysis parameters
+    TRAIN_TEST_SPLIT_RATIO = 0.8  # 80% training, 20% testing
+    CV_FOLDS = 5  # Number of folds for cross-validation
+    RANDOM_STATE = 42  # Random seed for reproducibility
+
     def __init__(self):
         """
         Initialise la configuration avec les paramètres par défaut.
