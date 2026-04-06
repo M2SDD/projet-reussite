@@ -204,6 +204,44 @@ class StatisticsModule:
 
         return outliers_df
 
+    def characterize_distribution(self, df):
+        """
+        Calcule les caractéristiques de distribution (asymétrie et aplatissement).
+
+        Calcule pour chaque colonne numérique :
+        - Skewness (asymétrie) : mesure de l'asymétrie de la distribution
+        - Kurtosis (aplatissement) : mesure de l'aplatissement de la distribution
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les données à analyser.
+
+        Returns:
+            dict: Dictionnaire avec skewness et kurtosis pour chaque colonne numérique.
+                  Structure : {
+                      'skewness': {col1: val1, col2: val2, ...},
+                      'kurtosis': {col1: val1, col2: val2, ...}
+                  }
+        """
+        import warnings
+
+        # Sélectionner uniquement les colonnes numériques
+        numeric_df = df.select_dtypes(include=[np.number])
+
+        if numeric_df.empty:
+            warnings.warn(
+                "Aucune colonne numérique trouvée dans le DataFrame.",
+                UserWarning,
+            )
+            return {}
+
+        # Calculer skewness et kurtosis
+        stats = {
+            'skewness': numeric_df.skew().to_dict(),
+            'kurtosis': numeric_df.kurtosis().to_dict(),
+        }
+
+        return stats
+
     def generate_summary(self, data):
         """
         Génère un résumé statistique complet des données.
