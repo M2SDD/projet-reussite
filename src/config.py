@@ -39,6 +39,10 @@ class Config:
     NOTE_MIN = 0
     NOTE_MAX = 20
 
+    # Risk assessment thresholds
+    RISK_THRESHOLD_HIGH = 10  # Below this grade indicates high risk
+    RISK_THRESHOLD_MEDIUM = 12  # Below this grade indicates medium risk
+
     # Datetime format for parsing log timestamps
     DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
