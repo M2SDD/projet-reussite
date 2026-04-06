@@ -297,8 +297,193 @@ class TestComputeSummaryStatistics:
 
 class TestDetectOutliers:
     """Test detect_outliers functionality."""
-    # Tests will be implemented in subtask-2-3
-    pass
+
+    def test_detect_outliers_basic(self, stats_module, df_with_outliers):
+        """Test that outliers are detected correctly using IQR method."""
+        result = stats_module.detect_outliers(df_with_outliers)
+
+        # Verify structure
+        assert isinstance(result, pd.DataFrame)
+        assert result.shape == df_with_outliers.shape
+        assert list(result.columns) == list(df_with_outliers.columns)
+
+        # Verify that the value 100 in 'values' column is detected as outlier
+        outlier_indices = result[result['values'] == True].index
+        assert len(outlier_indices) > 0
+        assert 100 in df_with_outliers.loc[outlier_indices, 'values'].values
+
+    def test_detect_outliers_known_outlier(self, stats_module, df_with_outliers):
+        """Test that the known outlier (100) is correctly identified."""
+        result = stats_module.detect_outliers(df_with_outliers)
+
+        # The value 100 should be identified as an outlier
+        values_column = df_with_outliers['values']
+        outlier_mask = result['values']
+
+        # Find where the value is 100
+        idx_100 = values_column[values_column == 100].index[0]
+        assert outlier_mask.loc[idx_100] == True
+
+    def test_detect_outliers_no_outliers(self, stats_module, df_without_outliers):
+        """Test that DataFrame without outliers returns all False."""
+        result = stats_module.detect_outliers(df_without_outliers)
+
+        # All values should be False
+        assert result['values'].sum() == 0
+
+    def test_detect_outliers_normal_column(self, stats_module, df_with_outliers):
+        """Test that column without outliers returns all False."""
+        result = stats_module.detect_outliers(df_with_outliers)
+
+        # The 'normal' column has sequential values 1-12, should have no outliers
+        assert result['normal'].sum() == 0
+
+    def test_detect_outliers_mixed_df(self, stats_module, sample_mixed_df):
+        """Test that only numeric columns are processed in mixed DataFrame."""
+        result = stats_module.detect_outliers(sample_mixed_df)
+
+        # Result should have the same shape
+        assert result.shape == sample_mixed_df.shape
+
+        # Non-numeric columns should be all False
+        assert result['nom'].sum() == 0
+        assert result['heure'].sum() == 0
+
+        # Numeric columns should be analyzed
+        assert 'pseudo' in result.columns
+        assert 'note' in result.columns
+
+    def test_detect_outliers_empty_df(self, stats_module, empty_df):
+        """Test that empty DataFrame returns empty DataFrame with warning."""
+        with pytest.warns(UserWarning, match='Aucune colonne numérique'):
+            result = stats_module.detect_outliers(empty_df)
+
+        assert isinstance(result, pd.DataFrame)
+        assert result.empty
+
+    def test_detect_outliers_non_numeric_df(self, stats_module, non_numeric_df):
+        """Test that DataFrame with no numeric columns returns all False with warning."""
+        with pytest.warns(UserWarning, match='Aucune colonne numérique'):
+            result = stats_module.detect_outliers(non_numeric_df)
+
+        # Should return DataFrame of same shape with all False
+        assert result.shape == non_numeric_df.shape
+        assert result.all(axis=None) == False
+
+    def test_detect_outliers_single_row(self, stats_module, single_row_df):
+        """Test that single row DataFrame returns no outliers."""
+        result = stats_module.detect_outliers(single_row_df)
+
+        # Single value cannot be an outlier (Q1 = Q3 = value, IQR = 0)
+        assert result['value'].sum() == 0
+
+    def test_detect_outliers_with_missing(self, stats_module, df_with_missing):
+        """Test that missing values are handled correctly (not flagged as outliers)."""
+        result = stats_module.detect_outliers(df_with_missing)
+
+        # Result should have same shape
+        assert result.shape == df_with_missing.shape
+
+        # NaN values should not be flagged as outliers (should be False or NaN)
+        # Check that the result has boolean or NaN values
+        for col in result.columns:
+            assert result[col].dtype == bool or pd.api.types.is_bool_dtype(result[col])
+
+    def test_detect_outliers_no_side_effects(self, stats_module, df_with_outliers):
+        """Test that detecting outliers does not modify the original DataFrame."""
+        original_df = df_with_outliers.copy()
+        stats_module.detect_outliers(df_with_outliers)
+
+        pd.testing.assert_frame_equal(df_with_outliers, original_df)
+
+    def test_detect_outliers_returns_dataframe(self, stats_module, sample_numeric_df):
+        """Test that the function returns a DataFrame."""
+        result = stats_module.detect_outliers(sample_numeric_df)
+
+        assert isinstance(result, pd.DataFrame)
+
+    def test_detect_outliers_boolean_values(self, stats_module, df_with_outliers):
+        """Test that result contains only boolean values."""
+        result = stats_module.detect_outliers(df_with_outliers)
+
+        # All columns should be boolean type
+        for col in result.columns:
+            assert result[col].dtype == bool
+
+    def test_detect_outliers_same_index(self, stats_module, df_with_outliers):
+        """Test that result preserves the same index as input."""
+        result = stats_module.detect_outliers(df_with_outliers)
+
+        pd.testing.assert_index_equal(result.index, df_with_outliers.index)
+
+    def test_detect_outliers_same_columns(self, stats_module, sample_numeric_df):
+        """Test that result preserves the same columns as input."""
+        result = stats_module.detect_outliers(sample_numeric_df)
+
+        pd.testing.assert_index_equal(result.columns, sample_numeric_df.columns)
+
+    def test_detect_outliers_iqr_calculation(self, stats_module):
+        """Test that IQR method is correctly applied."""
+        # Create a DataFrame where we know the IQR bounds
+        # Values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 100]
+        # Q1 = 2.75, Q3 = 7.25, IQR = 4.5
+        # Lower bound = 2.75 - 1.5*4.5 = -4.0
+        # Upper bound = 7.25 + 1.5*4.5 = 14.0
+        # So 100 should be an outlier
+        df = pd.DataFrame({
+            'test_col': [1, 2, 3, 4, 5, 6, 7, 8, 9, 100],
+        })
+
+        result = stats_module.detect_outliers(df)
+
+        # Only the value 100 should be flagged as outlier
+        assert result['test_col'].sum() == 1
+        assert result['test_col'].iloc[-1] == True  # Last value (100) is outlier
+
+    def test_detect_outliers_multiple_outliers(self, stats_module):
+        """Test detection of multiple outliers."""
+        df = pd.DataFrame({
+            'values': [1, 2, 3, 4, 5, 6, 7, 8, 100, 200],
+        })
+
+        result = stats_module.detect_outliers(df)
+
+        # Both 100 and 200 should be outliers
+        assert result['values'].sum() == 2
+
+    def test_detect_outliers_negative_outlier(self, stats_module):
+        """Test detection of negative outliers (below lower bound)."""
+        df = pd.DataFrame({
+            'values': [-100, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+        })
+
+        result = stats_module.detect_outliers(df)
+
+        # -100 should be detected as outlier
+        assert result['values'].iloc[0] == True
+        assert result['values'].sum() >= 1
+
+    def test_detect_outliers_uniform_distribution(self, stats_module):
+        """Test that uniform distribution has no outliers."""
+        df = pd.DataFrame({
+            'values': list(range(1, 21)),  # 1 to 20
+        })
+
+        result = stats_module.detect_outliers(df)
+
+        # Uniform distribution should have no outliers
+        assert result['values'].sum() == 0
+
+    def test_detect_outliers_all_same_values(self, stats_module):
+        """Test that all identical values produce no outliers."""
+        df = pd.DataFrame({
+            'values': [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+        })
+
+        result = stats_module.detect_outliers(df)
+
+        # IQR = 0, so no values can be outliers
+        assert result['values'].sum() == 0
 
 
 class TestCharacterizeDistribution:
