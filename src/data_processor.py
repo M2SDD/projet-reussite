@@ -23,6 +23,7 @@ __status__ = "Production"
 import pandas as pd
 import warnings
 from scipy import stats
+from sklearn.feature_selection import SelectKBest, f_regression
 
 from .config import Config
 
@@ -1038,6 +1039,70 @@ class DataProcessor:
             result = filtered_numeric
 
         return result
+
+    def select_k_best(self, df, target, k=10, score_func=f_regression):
+        """
+        Sélectionne les k meilleures features basées sur des tests statistiques univariés.
+
+        Cette méthode de sélection de features utilise SelectKBest de scikit-learn
+        pour évaluer chaque feature individuellement par rapport à la cible (target)
+        et sélectionner les k features ayant les scores les plus élevés.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target (str): Le nom de la colonne cible à prédire.
+            k (int): Le nombre de features à sélectionner. Par défaut 10.
+            score_func (callable): La fonction de score à utiliser pour l'évaluation.
+                Par défaut f_regression pour les problèmes de régression.
+                Utilisez f_classif pour les problèmes de classification.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant uniquement les k meilleures features.
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+            ValueError: Si le DataFrame ne contient pas assez de colonnes numériques.
+            ValueError: Si k est supérieur au nombre de features disponibles.
+        """
+        if target not in df.columns:
+            raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
+
+        # Separate target from features
+        y = df[target]
+        X = df.drop(columns=[target])
+
+        # Select only numeric columns for feature selection
+        numeric_cols = X.select_dtypes(include=['number']).columns.tolist()
+
+        if len(numeric_cols) == 0:
+            raise ValueError("Le DataFrame ne contient aucune colonne numérique pour la sélection de features.")
+
+        if k > len(numeric_cols):
+            raise ValueError(
+                f"k ({k}) est supérieur au nombre de features disponibles ({len(numeric_cols)})."
+            )
+
+        # Extract numeric features
+        X_numeric = X[numeric_cols]
+
+        # Apply SelectKBest
+        selector = SelectKBest(score_func=score_func, k=k)
+        selector.fit(X_numeric, y)
+
+        # Get selected feature names
+        selected_mask = selector.get_support()
+        selected_features = [col for col, selected in zip(numeric_cols, selected_mask) if selected]
+
+        removed_count = len(numeric_cols) - len(selected_features)
+        if removed_count > 0:
+            removed_cols = [col for col in numeric_cols if col not in selected_features]
+            warnings.warn(
+                f"{removed_count} colonnes ont été exclues par SelectKBest: {removed_cols}",
+                UserWarning,
+            )
+
+        # Return DataFrame with selected features
+        return X[selected_features]
 
     def process_data(self, data):
         """
