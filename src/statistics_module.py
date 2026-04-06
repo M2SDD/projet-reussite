@@ -158,6 +158,52 @@ class StatisticsModule:
 
         return stats
 
+    def detect_outliers(self, df):
+        """
+        Détecte les valeurs aberrantes (outliers) en utilisant la méthode IQR.
+
+        La méthode IQR (Interquartile Range) identifie les outliers comme
+        les valeurs qui se situent en dehors de l'intervalle [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les données à analyser.
+
+        Returns:
+            pd.DataFrame: DataFrame de même forme que l'entrée avec des valeurs booléennes.
+                         True indique un outlier, False indique une valeur normale.
+                         Les colonnes non-numériques contiennent uniquement False.
+        """
+        import warnings
+
+        # Créer un DataFrame de résultat avec la même forme, initialisé à False
+        outliers_df = pd.DataFrame(False, index=df.index, columns=df.columns)
+
+        # Sélectionner uniquement les colonnes numériques
+        numeric_df = df.select_dtypes(include=[np.number])
+
+        if numeric_df.empty:
+            warnings.warn(
+                "Aucune colonne numérique trouvée dans le DataFrame.",
+                UserWarning,
+            )
+            return outliers_df
+
+        # Pour chaque colonne numérique, détecter les outliers avec la méthode IQR
+        for col in numeric_df.columns:
+            # Calculer Q1, Q3 et IQR
+            Q1 = numeric_df[col].quantile(0.25)
+            Q3 = numeric_df[col].quantile(0.75)
+            IQR = Q3 - Q1
+
+            # Définir les bornes
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+            # Identifier les outliers
+            outliers_df[col] = (numeric_df[col] < lower_bound) | (numeric_df[col] > upper_bound)
+
+        return outliers_df
+
     def generate_summary(self, data):
         """
         Génère un résumé statistique complet des données.
