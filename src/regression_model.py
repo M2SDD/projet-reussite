@@ -261,3 +261,61 @@ class RegressionModel:
         r2 = r2_score(y, y_pred)
 
         return r2
+
+    def compute_rmse(self, X, y):
+        """
+        Calcule l'erreur quadratique moyenne (RMSE - Root Mean Squared Error) du modèle.
+
+        Le RMSE mesure l'écart-type des erreurs de prédiction (résidus). Il indique
+        à quel point les prédictions sont proches des valeurs réelles, dans les mêmes
+        unités que la variable cible. Plus le RMSE est faible, meilleure est la
+        précision du modèle.
+
+        Formule : RMSE = √(Σ(y_true - y_pred)² / n)
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles calculer le RMSE.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            float: Le RMSE. Une valeur faible indique que les prédictions sont proches
+                   des valeurs réelles. La valeur est toujours positive (>= 0).
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de calculer le RMSE."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Faire les prédictions
+        y_pred = self.predict(X)
+
+        # Calculer le RMSE
+        rmse = np.sqrt(np.mean((y - y_pred) ** 2))
+
+        return rmse
