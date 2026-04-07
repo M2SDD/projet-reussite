@@ -20,15 +20,8 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+import os
 from src import Config, DataLoader, DataProcessor, StatisticsModule, Visualizer
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Constantes
-# ----------------------------------------------------------------------------------------------------------------------
-# les constantes par défaut sont définies dans les src.*
-LOGS_FILE = 'data/logs_info_25_pseudo.csv'
-NOTES_FILE = 'data/notes_info_25_pseudo.csv'
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -36,7 +29,28 @@ NOTES_FILE = 'data/notes_info_25_pseudo.csv'
 # ----------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     # Initialisation de la configuration
-    config = Config()
+    # Charger depuis config.json si présent, sinon utiliser les valeurs par défaut
+    config_file_path = 'config.json'
+    if os.path.exists(config_file_path):
+        config = Config(config_file=config_file_path)
+        print(f"✓ Configuration chargée depuis: {config_file_path}")
+    else:
+        config = Config()
+        print("✓ Configuration par défaut utilisée (pas de config.json trouvé)")
+
+    # Utiliser les chemins de fichiers de la configuration
+    # Fallback vers les fichiers spécifiques du projet si les valeurs par défaut ne sont pas modifiées
+    LOGS_FILE = config.LOGS_FILE_PATH if hasattr(config, 'LOGS_FILE_PATH') else 'data/logs_info_25_pseudo.csv'
+    NOTES_FILE = config.NOTES_FILE_PATH if hasattr(config, 'NOTES_FILE_PATH') else 'data/notes_info_25_pseudo.csv'
+
+    # Si les chemins de config sont les valeurs par défaut génériques, utiliser les fichiers spécifiques
+    if LOGS_FILE == 'data/logs.csv' and os.path.exists('data/logs_info_25_pseudo.csv'):
+        LOGS_FILE = 'data/logs_info_25_pseudo.csv'
+    if NOTES_FILE == 'data/notes.csv' and os.path.exists('data/notes_info_25_pseudo.csv'):
+        NOTES_FILE = 'data/notes_info_25_pseudo.csv'
+
+    print(f"✓ Fichiers de données: logs={LOGS_FILE}, notes={NOTES_FILE}")
+    print()
 
     # Initialisation des composants principaux
     data_loader = DataLoader()
