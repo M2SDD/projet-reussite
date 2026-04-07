@@ -466,3 +466,41 @@ class RegressionModel:
         adjusted_r2 = 1 - ((1 - r2) * (n - 1) / (n - p - 1))
 
         return adjusted_r2
+
+    def evaluate(self, X, y):
+        """
+        Évalue le modèle et retourne toutes les métriques de performance dans un dictionnaire.
+
+        Cette méthode calcule toutes les métriques d'évaluation du modèle de régression :
+        - R² (coefficient de détermination)
+        - RMSE (erreur quadratique moyenne)
+        - MAE (erreur absolue moyenne)
+        - R² ajusté (coefficient de détermination ajusté)
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles évaluer le modèle.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            dict: Dictionnaire contenant toutes les métriques d'évaluation :
+                - 'r2' (float): Le coefficient de détermination R².
+                - 'rmse' (float): L'erreur quadratique moyenne.
+                - 'mae' (float): L'erreur absolue moyenne.
+                - 'adjusted_r2' (float): Le coefficient de détermination ajusté.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Calculer toutes les métriques en utilisant les méthodes existantes
+        metrics = {
+            'r2': self.compute_r2_score(X, y),
+            'rmse': self.compute_rmse(X, y),
+            'mae': self.compute_mae(X, y),
+            'adjusted_r2': self.compute_adjusted_r2(X, y)
+        }
+
+        return metrics
