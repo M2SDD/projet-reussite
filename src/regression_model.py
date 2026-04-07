@@ -24,6 +24,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
 
 from .config import Config
 
@@ -199,3 +200,64 @@ class RegressionModel:
         }
 
         return coefficients
+
+    def compute_r2_score(self, X, y):
+        """
+        Calcule le coefficient de détermination R² du modèle.
+
+        Le R² (R-squared) mesure la proportion de la variance dans la variable cible
+        qui est prédictible à partir des features. Il varie généralement entre 0 et 1,
+        où 1 indique une prédiction parfaite et 0 indique que le modèle n'est pas
+        meilleur qu'une simple moyenne. Des valeurs négatives sont possibles si le
+        modèle est pire que la prédiction par la moyenne.
+
+        Formule : R² = 1 - (SS_res / SS_tot)
+        où SS_res = Σ(y_true - y_pred)² et SS_tot = Σ(y_true - y_mean)²
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles calculer le R².
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            float: Le coefficient de détermination R². Une valeur proche de 1 indique
+                   un bon ajustement du modèle, tandis qu'une valeur proche de 0
+                   indique un ajustement médiocre.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de calculer le R²."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Faire les prédictions
+        y_pred = self.predict(X)
+
+        # Calculer le R² score
+        r2 = r2_score(y, y_pred)
+
+        return r2
