@@ -378,3 +378,91 @@ class RegressionModel:
         mae = np.mean(np.abs(y - y_pred))
 
         return mae
+
+    def compute_adjusted_r2(self, X, y):
+        """
+        Calcule le coefficient de détermination ajusté (R² ajusté) du modèle.
+
+        Le R² ajusté est une version modifiée du R² qui ajuste la valeur en fonction
+        du nombre de features dans le modèle. Contrairement au R², le R² ajusté pénalise
+        l'ajout de features qui n'améliorent pas significativement le modèle. Il est
+        particulièrement utile pour comparer des modèles avec un nombre différent de
+        variables explicatives.
+
+        Formule : R²_ajusté = 1 - [(1 - R²) * (n - 1) / (n - p - 1)]
+        où n = nombre d'échantillons, p = nombre de features
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles calculer le R² ajusté.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            float: Le coefficient de détermination ajusté. Une valeur proche de 1 indique
+                   un bon ajustement du modèle. Peut être négatif si le modèle est très mauvais.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de calculer le R² ajusté."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Calculer le R² score
+        r2 = self.compute_r2_score(X, y)
+
+        # Obtenir le nombre d'échantillons et de features
+        n = len(X)
+
+        # Gérer les cas où X est un DataFrame ou un tableau numpy
+        if hasattr(X, 'shape'):
+            # X est un tableau numpy ou un DataFrame
+            if len(X.shape) == 1:
+                # X est un tableau 1D (une seule feature)
+                p = 1
+            else:
+                # X est un tableau 2D
+                p = X.shape[1]
+        else:
+            # X est une structure de données sans attribut shape
+            # Essayer de convertir en array pour obtenir le nombre de features
+            X_array = np.array(X)
+            if len(X_array.shape) == 1:
+                p = 1
+            else:
+                p = X_array.shape[1]
+
+        # Calculer le R² ajusté
+        # Formule : R²_ajusté = 1 - [(1 - R²) * (n - 1) / (n - p - 1)]
+        if n - p - 1 <= 0:
+            raise ValueError(
+                f"Le nombre d'échantillons ({n}) doit être supérieur au nombre de features ({p}) + 1 "
+                f"pour calculer le R² ajusté."
+            )
+
+        adjusted_r2 = 1 - ((1 - r2) * (n - 1) / (n - p - 1))
+
+        return adjusted_r2
