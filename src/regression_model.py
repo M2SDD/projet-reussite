@@ -22,6 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
@@ -568,3 +569,81 @@ class RegressionModel:
         }
 
         return metrics
+
+    def plot_residuals(self, X, y):
+        """
+        Crée un graphique des résidus du modèle de régression.
+
+        Cette méthode génère un graphique de résidus (residual plot) qui affiche
+        les résidus en fonction des valeurs prédites. Ce type de graphique permet
+        de vérifier visuellement les hypothèses de la régression linéaire :
+        - Homoscédasticité : la variance des résidus doit être constante
+        - Indépendance : les résidus ne doivent pas montrer de pattern
+        - Moyenne nulle : les résidus doivent être centrés autour de zéro
+
+        Le graphique comprend :
+        - Un scatter plot des résidus vs valeurs prédites
+        - Une ligne horizontale à y=0 pour référence
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles créer le graphique.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            matplotlib.figure.Figure: La figure matplotlib contenant le graphique des résidus.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de créer un graphique des résidus."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Calculer les prédictions et les résidus
+        y_pred = self.predict(X)
+        residuals = self.compute_residuals(X, y)
+
+        # Créer la figure et les axes
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Tracer le scatter plot des résidus vs valeurs prédites
+        ax.scatter(y_pred, residuals, alpha=0.6, edgecolors='k', linewidths=0.5)
+
+        # Ajouter une ligne horizontale à y=0
+        ax.axhline(y=0, color='r', linestyle='--', linewidth=1.5, label='y=0')
+
+        # Configurer les labels et le titre
+        ax.set_xlabel('Valeurs prédites', fontsize=12)
+        ax.set_ylabel('Résidus', fontsize=12)
+        ax.set_title('Graphique des résidus', fontsize=14, fontweight='bold')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # Ajuster la mise en page
+        fig.tight_layout()
+
+        return fig
