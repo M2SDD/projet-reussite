@@ -50,3 +50,45 @@ class RegressionModel:
         """
         self.config = config if config is not None else Config()
         self.model = None
+
+    def train_test_split(self, df, target_column, test_size=0.2, random_state=None):
+        """
+        Divise les données en ensembles d'entraînement et de test.
+
+        Sépare les features (X) de la variable cible (y) et effectue
+        un split train/test avec le ratio configuré.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les features et la cible.
+            target_column (str): Le nom de la colonne cible à prédire.
+            test_size (float, optional): Proportion de l'ensemble de test (défaut: 0.2).
+            random_state (int, optional): Seed pour la reproductibilité (défaut: None).
+
+        Returns:
+            tuple: (X_train, X_test, y_train, y_test)
+                - X_train (pd.DataFrame): Features d'entraînement
+                - X_test (pd.DataFrame): Features de test
+                - y_train (pd.Series): Cible d'entraînement
+                - y_test (pd.Series): Cible de test
+
+        Raises:
+            ValueError: Si la colonne cible n'existe pas dans le DataFrame.
+        """
+        if target_column not in df.columns:
+            raise ValueError(
+                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame. "
+                f"Colonnes disponibles: {list(df.columns)}"
+            )
+
+        # Séparer les features (X) de la cible (y)
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+
+        # Effectuer le split train/test
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y,
+            test_size=test_size,
+            random_state=random_state
+        )
+
+        return X_train, X_test, y_train, y_test
