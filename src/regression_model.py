@@ -134,3 +134,37 @@ class RegressionModel:
         self.model.fit(X, y)
 
         return self
+
+    def predict(self, X):
+        """
+        Prédit les valeurs cibles pour les features fournies.
+
+        Utilise le modèle de régression linéaire entraîné pour faire des prédictions
+        sur de nouvelles données.
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles faire des prédictions.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+
+        Returns:
+            np.ndarray: Les valeurs prédites de shape (n_samples,).
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné ou si X est vide.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de faire des prédictions."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        # Faire les prédictions
+        predictions = self.model.predict(X)
+
+        return predictions
