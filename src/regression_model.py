@@ -319,3 +319,62 @@ class RegressionModel:
         rmse = np.sqrt(np.mean((y - y_pred) ** 2))
 
         return rmse
+
+    def compute_mae(self, X, y):
+        """
+        Calcule l'erreur absolue moyenne (MAE - Mean Absolute Error) du modèle.
+
+        Le MAE mesure la moyenne des valeurs absolues des erreurs de prédiction.
+        Il donne une idée de l'amplitude moyenne des erreurs du modèle, dans les mêmes
+        unités que la variable cible. Plus le MAE est faible, meilleure est la
+        précision du modèle. Contrairement au RMSE, le MAE est moins sensible aux
+        valeurs aberrantes car il n'élève pas les erreurs au carré.
+
+        Formule : MAE = Σ|y_true - y_pred| / n
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles calculer le MAE.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            float: Le MAE. Une valeur faible indique que les prédictions sont proches
+                   des valeurs réelles. La valeur est toujours positive (>= 0).
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de calculer le MAE."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Faire les prédictions
+        y_pred = self.predict(X)
+
+        # Calculer le MAE
+        mae = np.mean(np.abs(y - y_pred))
+
+        return mae
