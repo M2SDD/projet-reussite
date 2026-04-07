@@ -467,6 +467,70 @@ class RegressionModel:
 
         return adjusted_r2
 
+    def compute_residuals(self, X, y):
+        """
+        Calcule les résidus du modèle de régression.
+
+        Les résidus sont définis comme la différence entre les valeurs observées (réelles)
+        et les valeurs prédites par le modèle : résidu = y_réel - y_prédit.
+        Les résidus permettent d'analyser la qualité du modèle et de vérifier les hypothèses
+        de la régression linéaire (normalité, homoscédasticité, indépendance).
+
+        Formule : résidus = y_true - y_pred
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles calculer les résidus.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            np.ndarray: Les résidus de shape (n_samples,). Des résidus proches de zéro
+                       indiquent des bonnes prédictions. Les résidus doivent idéalement
+                       suivre une distribution normale centrée sur zéro.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de calculer les résidus."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Faire les prédictions
+        y_pred = self.predict(X)
+
+        # Calculer les résidus
+        residuals = y - y_pred
+
+        # Convertir en numpy array si nécessaire
+        if hasattr(residuals, 'values'):
+            # residuals est une Series pandas
+            residuals = residuals.values
+
+        return residuals
+
     def evaluate(self, X, y):
         """
         Évalue le modèle et retourne toutes les métriques de performance dans un dictionnaire.
