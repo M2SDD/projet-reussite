@@ -92,3 +92,45 @@ class RegressionModel:
         )
 
         return X_train, X_test, y_train, y_test
+
+    def fit(self, X, y):
+        """
+        Entraîne le modèle de régression linéaire sur les données fournies.
+
+        Crée une instance de LinearRegression et l'entraîne avec les features (X)
+        et la variable cible (y). Le modèle entraîné est stocké dans self.model.
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features d'entraînement.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+            y (pd.Series ou np.ndarray): La variable cible à prédire.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            self: Retourne l'instance pour permettre le chaînage de méthodes.
+
+        Raises:
+            ValueError: Si X ou y sont vides, ou si leurs dimensions sont incompatibles.
+        """
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Créer et entraîner le modèle
+        self.model = LinearRegression()
+        self.model.fit(X, y)
+
+        return self
