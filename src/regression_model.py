@@ -168,3 +168,34 @@ class RegressionModel:
         predictions = self.model.predict(X)
 
         return predictions
+
+    def get_coefficients(self):
+        """
+        Extrait les coefficients et l'intercept du modèle de régression linéaire entraîné.
+
+        Cette méthode retourne un dictionnaire contenant les coefficients (poids) associés
+        à chaque feature ainsi que l'intercept (ordonnée à l'origine) du modèle.
+
+        Returns:
+            dict: Dictionnaire contenant :
+                - 'coefficients' (np.ndarray): Tableau des coefficients de shape (n_features,).
+                  Chaque valeur représente le poids de la feature correspondante.
+                - 'intercept' (float): L'intercept (ordonnée à l'origine) du modèle.
+
+        Raises:
+            ValueError: Si le modèle n'a pas encore été entraîné.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant d'extraire les coefficients."
+            )
+
+        # Extraire les coefficients et l'intercept
+        coefficients = {
+            'coefficients': self.model.coef_,
+            'intercept': self.model.intercept_
+        }
+
+        return coefficients
