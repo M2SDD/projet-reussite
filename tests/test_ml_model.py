@@ -21,7 +21,7 @@ import warnings
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from src.ml_model import MLModel
 from src.regression_model import RegressionModel
 from src.config import Config
@@ -194,7 +194,7 @@ class TestModelFit:
         result = model.fit(X, y)
 
         assert model.model is not None
-        assert isinstance(model.model, LinearRegression)
+        assert isinstance(model.model, RandomForestRegressor)
         assert result is model  # Check method chaining
 
     def test_fit_with_dataframe(self, model, sample_data):

@@ -22,7 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
@@ -42,14 +42,31 @@ class MLModel:
     et l'évaluation du modèle.
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, model_type='random_forest'):
         """
         Initialise le modèle de machine learning.
 
+        Supporte deux types de modèles:
+        - 'random_forest': RandomForestRegressor (par défaut)
+        - 'gradient_boosting': GradientBoostingRegressor
+
         Args:
             config (Config): Instance de configuration. Si None, utilise la configuration par défaut.
+            model_type (str): Type de modèle ('random_forest' ou 'gradient_boosting'). Défaut: 'random_forest'.
+
+        Raises:
+            ValueError: Si model_type n'est pas un type supporté.
         """
         self.config = config if config is not None else Config()
+
+        # Validate model_type
+        valid_types = ['random_forest', 'gradient_boosting']
+        if model_type not in valid_types:
+            raise ValueError(
+                f"model_type doit être l'un de {valid_types}, reçu: {model_type}"
+            )
+
+        self.model_type = model_type
         self.model = None
 
     def train_test_split(self, df, target_column, test_size=0.2, random_state=None):
@@ -131,7 +148,14 @@ class MLModel:
             )
 
         # Créer et entraîner le modèle
-        self.model = LinearRegression()
+        if self.model_type == 'random_forest':
+            self.model = RandomForestRegressor()
+        elif self.model_type == 'gradient_boosting':
+            self.model = GradientBoostingRegressor()
+        else:
+            raise ValueError(
+                f"model_type invalide: {self.model_type}"
+            )
         self.model.fit(X, y)
 
         return self
