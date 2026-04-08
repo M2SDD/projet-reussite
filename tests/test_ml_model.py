@@ -23,6 +23,7 @@ matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from src.ml_model import MLModel
+from src.regression_model import RegressionModel
 from src.config import Config
 
 
@@ -619,3 +620,139 @@ class TestEdgeCases:
 
         assert model.config is not None
         assert isinstance(model.config, Config)
+
+
+class TestMLModelVsRegressionModelComparison:
+    """Integration tests comparing MLModel and RegressionModel on same data."""
+
+    def test_mlmodel_vs_regression_comparison(self, large_sample_data):
+        """Test that MLModel and RegressionModel produce similar results on same data."""
+        # Prepare data
+        X = large_sample_data.drop(columns=['note'])
+        y = large_sample_data['note']
+
+        # Create and train both models
+        ml_model = MLModel()
+        regression_model = RegressionModel()
+
+        ml_model.fit(X, y)
+        regression_model.fit(X, y)
+
+        # Compare predictions
+        ml_predictions = ml_model.predict(X)
+        regression_predictions = regression_model.predict(X)
+
+        # Predictions should be very close (both use LinearRegression)
+        np.testing.assert_allclose(ml_predictions, regression_predictions, rtol=1e-10)
+
+        # Compare R² scores
+        ml_r2 = ml_model.compute_r2_score(X, y)
+        regression_r2 = regression_model.compute_r2_score(X, y)
+
+        assert np.isclose(ml_r2, regression_r2, rtol=1e-10)
+
+        # Compare RMSE
+        ml_rmse = ml_model.compute_rmse(X, y)
+        regression_rmse = regression_model.compute_rmse(X, y)
+
+        assert np.isclose(ml_rmse, regression_rmse, rtol=1e-10)
+
+        # Compare MAE
+        ml_mae = ml_model.compute_mae(X, y)
+        regression_mae = regression_model.compute_mae(X, y)
+
+        assert np.isclose(ml_mae, regression_mae, rtol=1e-10)
+
+        # Compare coefficients
+        ml_coefs = ml_model.model.coef_
+        regression_coefs_dict = regression_model.get_coefficients()
+
+        # Extract coefficients from regression model dictionary
+        regression_coefs = regression_coefs_dict['coefficients']
+
+        np.testing.assert_allclose(ml_coefs, regression_coefs, rtol=1e-10)
+
+        # Compare intercepts
+        ml_intercept = ml_model.model.intercept_
+        regression_intercept = regression_coefs_dict['intercept']
+
+        assert np.isclose(ml_intercept, regression_intercept, rtol=1e-10)
+
+    def test_mlmodel_vs_regression_evaluation(self, sample_data):
+        """Test that both models' evaluate methods return similar metrics."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        # Create and train both models
+        ml_model = MLModel()
+        regression_model = RegressionModel()
+
+        ml_model.fit(X, y)
+        regression_model.fit(X, y)
+
+        # Get evaluation metrics from both
+        ml_metrics = ml_model.evaluate(X, y)
+        regression_metrics = regression_model.evaluate(X, y)
+
+        # Compare common metrics
+        assert np.isclose(ml_metrics['r2'], regression_metrics['r2'], rtol=1e-10)
+        assert np.isclose(ml_metrics['rmse'], regression_metrics['rmse'], rtol=1e-10)
+        assert np.isclose(ml_metrics['mae'], regression_metrics['mae'], rtol=1e-10)
+
+    def test_mlmodel_vs_regression_perfect_fit(self, perfect_linear_data):
+        """Test that both models achieve perfect fit on perfect linear data."""
+        X = perfect_linear_data.drop(columns=['note'])
+        y = perfect_linear_data['note']
+
+        # Create and train both models
+        ml_model = MLModel()
+        regression_model = RegressionModel()
+
+        ml_model.fit(X, y)
+        regression_model.fit(X, y)
+
+        # Both should achieve near-perfect R²
+        ml_r2 = ml_model.compute_r2_score(X, y)
+        regression_r2 = regression_model.compute_r2_score(X, y)
+
+        assert np.isclose(ml_r2, 1.0, atol=1e-10)
+        assert np.isclose(regression_r2, 1.0, atol=1e-10)
+        assert np.isclose(ml_r2, regression_r2, rtol=1e-10)
+
+        # Both should have near-zero RMSE
+        ml_rmse = ml_model.compute_rmse(X, y)
+        regression_rmse = regression_model.compute_rmse(X, y)
+
+        assert np.isclose(ml_rmse, 0.0, atol=1e-10)
+        assert np.isclose(regression_rmse, 0.0, atol=1e-10)
+
+    def test_mlmodel_vs_regression_train_test_split(self, large_sample_data):
+        """Test that both models handle train-test splits consistently."""
+        # Use the same random_state for both models
+        ml_model = MLModel()
+        regression_model = RegressionModel()
+
+        # Perform train-test split with both models
+        ml_X_train, ml_X_test, ml_y_train, ml_y_test = ml_model.train_test_split(
+            large_sample_data, 'note', test_size=0.2, random_state=42
+        )
+
+        regression_X_train, regression_X_test, regression_y_train, regression_y_test = regression_model.train_test_split(
+            large_sample_data, 'note', test_size=0.2, random_state=42
+        )
+
+        # Both should produce identical splits
+        pd.testing.assert_frame_equal(ml_X_train, regression_X_train)
+        pd.testing.assert_frame_equal(ml_X_test, regression_X_test)
+        pd.testing.assert_series_equal(ml_y_train, regression_y_train)
+        pd.testing.assert_series_equal(ml_y_test, regression_y_test)
+
+        # Train both models
+        ml_model.fit(ml_X_train, ml_y_train)
+        regression_model.fit(regression_X_train, regression_y_train)
+
+        # Evaluate on test set
+        ml_test_r2 = ml_model.compute_r2_score(ml_X_test, ml_y_test)
+        regression_test_r2 = regression_model.compute_r2_score(regression_X_test, regression_y_test)
+
+        assert np.isclose(ml_test_r2, regression_test_r2, rtol=1e-10)
