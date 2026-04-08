@@ -713,3 +713,83 @@ class RegressionModel:
             'test_statistic': float(test_statistic),
             'p_value': float(p_value)
         }
+
+    def plot_qq_plot(self, X, y):
+        """
+        Crée un graphique Q-Q (quantile-quantile) des résidus du modèle de régression.
+
+        Cette méthode génère un graphique Q-Q qui compare la distribution des résidus
+        à une distribution normale théorique. Ce type de graphique permet de vérifier
+        visuellement l'hypothèse de normalité des résidus de la régression linéaire.
+
+        Le graphique comprend :
+        - Un scatter plot des quantiles théoriques vs quantiles empiriques
+        - Une ligne de référence rouge (droite à 45°) représentant une distribution normale parfaite
+        - Si les points suivent approximativement la ligne rouge, les résidus sont normalement distribués
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles créer le graphique.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            matplotlib.figure.Figure: La figure matplotlib contenant le graphique Q-Q.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de créer un graphique Q-Q."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Calculer les résidus
+        residuals = self.compute_residuals(X, y)
+
+        # Créer la figure et les axes
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Générer les données du Q-Q plot avec scipy.stats.probplot
+        # probplot retourne (theoretical_quantiles, ordered_values), (slope, intercept, r)
+        (theoretical_quantiles, ordered_values), (slope, intercept, r) = stats.probplot(residuals, dist="norm")
+
+        # Tracer le scatter plot des quantiles
+        ax.scatter(theoretical_quantiles, ordered_values, alpha=0.6, edgecolors='k', linewidths=0.5)
+
+        # Ajouter la ligne de référence (distribution normale parfaite)
+        ax.plot(theoretical_quantiles, slope * theoretical_quantiles + intercept,
+                'r--', linewidth=1.5, label='Ligne de référence')
+
+        # Configurer les labels et le titre
+        ax.set_xlabel('Quantiles théoriques', fontsize=12)
+        ax.set_ylabel('Quantiles empiriques', fontsize=12)
+        ax.set_title('Graphique Q-Q des résidus', fontsize=14, fontweight='bold')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # Ajuster la mise en page
+        fig.tight_layout()
+
+        return fig
