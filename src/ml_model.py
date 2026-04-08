@@ -170,6 +170,69 @@ class MLModel:
 
         return predictions
 
+    def get_feature_importance(self, feature_names):
+        """
+        Extrait l'importance des features du modèle de machine learning entraîné.
+
+        Cette méthode calcule l'importance de chaque feature en utilisant les valeurs
+        absolues des coefficients du modèle. Pour un modèle de régression linéaire,
+        les coefficients représentent l'impact de chaque feature sur la prédiction.
+        Les valeurs absolues permettent de classer les features par ordre d'importance
+        sans tenir compte du signe (positif ou négatif) de l'effet.
+
+        Args:
+            feature_names (pd.Index ou list): Les noms des features.
+                Peut être un Index pandas (ex: X.columns) ou une liste de noms.
+                Le nombre de noms doit correspondre au nombre de features du modèle.
+
+        Returns:
+            pd.DataFrame: DataFrame contenant l'importance des features avec deux colonnes :
+                - 'feature' (str): Le nom de la feature.
+                - 'importance' (float): L'importance de la feature (valeur absolue du coefficient).
+                Les lignes sont triées par ordre décroissant d'importance.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné ou si le nombre de noms
+                       ne correspond pas au nombre de features du modèle.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant d'extraire l'importance des features."
+            )
+
+        # Validation des entrées
+        if feature_names is None or len(feature_names) == 0:
+            raise ValueError("feature_names ne peut pas être vide.")
+
+        # Vérifier que le nombre de noms correspond au nombre de coefficients
+        n_features = len(self.model.coef_)
+        n_names = len(feature_names)
+
+        if n_names != n_features:
+            raise ValueError(
+                f"Le nombre de noms de features ({n_names}) ne correspond pas "
+                f"au nombre de features du modèle ({n_features})."
+            )
+
+        # Calculer l'importance des features (valeurs absolues des coefficients)
+        importance_values = np.abs(self.model.coef_)
+
+        # Créer un DataFrame avec les noms et les importances
+        feature_importance = pd.DataFrame({
+            'feature': list(feature_names),
+            'importance': importance_values
+        })
+
+        # Trier par ordre décroissant d'importance
+        feature_importance = feature_importance.sort_values(
+            by='importance',
+            ascending=False
+        ).reset_index(drop=True)
+
+        return feature_importance
+
     def compute_r2_score(self, X, y):
         """
         Calcule le coefficient de détermination R² du modèle.
