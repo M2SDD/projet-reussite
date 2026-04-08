@@ -1,0 +1,117 @@
+{
+  "_comment": "Configuration par défaut pour l'application de visualisation de données",
+  "_version": "1.0.0",
+
+  "LOGS_FILE_PATH": "data/logs.csv",
+  "_LOGS_FILE_PATH_description": "Chemin vers le fichier CSV contenant les logs d'activité",
+
+  "NOTES_FILE_PATH": "data/notes.csv",
+  "_NOTES_FILE_PATH_description": "Chemin vers le fichier CSV contenant les notes des étudiants",
+
+  "OUTPUT_DIR": "output",
+  "_OUTPUT_DIR_description": "Répertoire de sortie pour les fichiers générés",
+
+  "NOTE_MIN": 0,
+  "_NOTE_MIN_description": "Note minimale (système de notation français)",
+
+  "NOTE_MAX": 20,
+  "_NOTE_MAX_description": "Note maximale (système de notation français)",
+
+  "RISK_THRESHOLD_HIGH": 10,
+  "_RISK_THRESHOLD_HIGH_description": "Seuil de risque élevé - en dessous de cette note indique un risque élevé",
+
+  "RISK_THRESHOLD_MEDIUM": 12,
+  "_RISK_THRESHOLD_MEDIUM_description": "Seuil de risque moyen - en dessous de cette note indique un risque moyen",
+
+  "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
+  "_DATETIME_FORMAT_description": "Format de date/heure pour l'analyse des timestamps des logs",
+
+  "DUPLICATE_KEEP": "first",
+  "_DUPLICATE_KEEP_description": "Stratégie de conservation des doublons ('first', 'last', ou false)",
+
+  "DUPLICATE_SUBSET": null,
+  "_DUPLICATE_SUBSET_description": "Colonnes à considérer pour la détection des doublons (null = toutes les colonnes)",
+
+  "LOGS_COLUMN_MAPPING": {
+    "heure": "heure",
+    "pseudo": "pseudo",
+    "contexte": "contexte",
+    "composant": "composant",
+    "evenement": "evenement"
+  },
+  "_LOGS_COLUMN_MAPPING_description": "Mapping des noms de colonnes du CSV brut vers les noms internes pour les logs",
+
+  "NOTES_COLUMN_MAPPING": {
+    "pseudo": "pseudo",
+    "note": "note"
+  },
+  "_NOTES_COLUMN_MAPPING_description": "Mapping des noms de colonnes du CSV brut vers les noms internes pour les notes",
+
+  "FEATURE_HOUR_OF_DAY": true,
+  "_FEATURE_HOUR_OF_DAY_description": "Active l'extraction de l'heure de la journée comme feature",
+
+  "FEATURE_DAY_OF_WEEK": true,
+  "_FEATURE_DAY_OF_WEEK_description": "Active l'extraction du jour de la semaine comme feature",
+
+  "FEATURE_SESSION_COUNT": true,
+  "_FEATURE_SESSION_COUNT_description": "Active le comptage des sessions comme feature",
+
+  "FEATURE_TOTAL_EVENTS": true,
+  "_FEATURE_TOTAL_EVENTS_description": "Active le comptage total des événements comme feature",
+
+  "SESSION_GAP_MINUTES": 30,
+  "_SESSION_GAP_MINUTES_description": "Intervalle de temps (en minutes) pour définir une nouvelle session",
+
+  "FEATURE_EVENT_TYPES": ["view", "submit", "forum"],
+  "_FEATURE_EVENT_TYPES_description": "Types d'événements à suivre pour l'analyse d'engagement",
+
+  "COMPOSANT_CATEGORIES": {
+    "Système": "system",
+    "Devoir": "assignment",
+    "Fichier": "file",
+    "Forum": "forum",
+    "Dossier": "folder",
+    "URL": "url",
+    "Page": "page",
+    "Cours": "course"
+  },
+  "_COMPOSANT_CATEGORIES_description": "Mapping des types de composants Moodle vers des catégories simplifiées",
+
+  "EVENEMENT_CATEGORIES": {
+    "Cours consulté": "view",
+    "Module de cours consulté": "view",
+    "Activité de devoir consultée": "view",
+    "Un fichier a été déposé.": "submit",
+    "Une tentative a été soumise.": "submit",
+    "Discussion consultée": "forum",
+    "Message créé": "forum"
+  },
+  "_EVENEMENT_CATEGORIES_description": "Mapping des types d'événements Moodle vers des catégories d'action",
+
+  "TRAIN_TEST_SPLIT_RATIO": 0.8,
+  "_TRAIN_TEST_SPLIT_RATIO_description": "Ratio de division train/test pour le ML (0.8 = 80% entraînement, 20% test)",
+
+  "CV_FOLDS": 5,
+  "_CV_FOLDS_description": "Nombre de plis pour la validation croisée",
+
+  "RANDOM_STATE": 42,
+  "_RANDOM_STATE_description": "Graine aléatoire pour la reproductibilité des résultats",
+
+  "PLOT_DPI": 300,
+  "_PLOT_DPI_description": "Résolution en DPI pour les graphiques sauvegardés",
+
+  "PLOT_FIGSIZE": [10, 6],
+  "_PLOT_FIGSIZE_description": "Taille par défaut des figures (largeur, hauteur) en pouces",
+
+  "PLOT_STYLE": "seaborn-v0_8",
+  "_PLOT_STYLE_description": "Style Matplotlib à utiliser pour les graphiques",
+
+  "PLOT_COLOR_PALETTE": "Set2",
+  "_PLOT_COLOR_PALETTE_description": "Palette de couleurs par défaut pour les graphiques",
+
+  "PLOT_SAVE_FORMAT": "png",
+  "_PLOT_SAVE_FORMAT_description": "Format par défaut pour sauvegarder les graphiques",
+
+  "PLOT_FONT_SIZE": 12,
+  "_PLOT_FONT_SIZE_description": "Taille de police par défaut pour les graphiques"
+}
