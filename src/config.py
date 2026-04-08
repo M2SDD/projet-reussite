@@ -88,6 +88,11 @@ class Config:
         'Message créé': 'forum',
     }
 
+    # Regression model settings
+    REGRESSION_TEST_SIZE = 0.2  # Default train/test split ratio (80/20)
+    REGRESSION_RANDOM_STATE = 42  # Random seed for reproducibility
+    REGRESSION_NORMALITY_ALPHA = 0.05  # Significance level for normality tests (Shapiro-Wilk)
+
     def __init__(self):
         """
         Initialise la configuration avec les paramètres par défaut.
