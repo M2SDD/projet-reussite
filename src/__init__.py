@@ -23,7 +23,8 @@ __status__ = "Production"
 from .config import Config
 from .data_loader import DataLoader
 from .data_processor import DataProcessor
+from .regression_model import RegressionModel
 from .statistics_module import StatisticsModule
 from .visualizer import Visualizer
 
-__all__ = ['Config', 'DataLoader', 'DataProcessor', 'StatisticsModule', 'Visualizer']
+__all__ = ['Config', 'DataLoader', 'DataProcessor', 'RegressionModel', 'StatisticsModule', 'Visualizer']

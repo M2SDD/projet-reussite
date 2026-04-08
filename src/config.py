@@ -162,6 +162,8 @@ class Config:
     TRAIN_TEST_SPLIT_RATIO = 0.8  # 80% training, 20% testing
     CV_FOLDS = 5  # Number of folds for cross-validation
     RANDOM_STATE = 42  # Random seed for reproducibility
+    
+    NORMALITY_ALPHA = 0.05  # Significance level for normality tests (Shapiro-Wilk)
 
     # Visualization and plotting parameters
     PLOT_DPI = 300  # Resolution for saved plots
