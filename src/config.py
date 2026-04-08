@@ -53,6 +53,13 @@ class Config:
         TRAIN_TEST_SPLIT_RATIO (float): Ratio de séparation train/test (défaut: 0.8)
         CV_FOLDS (int): Nombre de plis pour la validation croisée (défaut: 5)
         RANDOM_STATE (int): Graine aléatoire pour la reproductibilité (défaut: 42)
+        RF_N_ESTIMATORS (int): Nombre d'arbres dans la forêt aléatoire (défaut: 100)
+        RF_MAX_DEPTH (int or None): Profondeur maximale des arbres (défaut: None)
+        RF_MIN_SAMPLES_SPLIT (int): Échantillons minimum pour diviser un noeud (défaut: 2)
+        RF_MIN_SAMPLES_LEAF (int): Échantillons minimum dans une feuille (défaut: 1)
+        RF_MAX_FEATURES (str or int): Features à considérer pour la meilleure division (défaut: 'sqrt')
+        RF_BOOTSTRAP (bool): Utilisation de bootstrap pour construire les arbres (défaut: True)
+        RF_CRITERION (str): Fonction pour mesurer la qualité d'une division (défaut: 'gini')
         PLOT_DPI (int): Résolution des graphiques sauvegardés (défaut: 300)
         PLOT_FIGSIZE (tuple): Taille par défaut des figures (largeur, hauteur) en pouces
 
@@ -162,8 +169,17 @@ class Config:
     TRAIN_TEST_SPLIT_RATIO = 0.8  # 80% training, 20% testing
     CV_FOLDS = 5  # Number of folds for cross-validation
     RANDOM_STATE = 42  # Random seed for reproducibility
-    
+
     NORMALITY_ALPHA = 0.05  # Significance level for normality tests (Shapiro-Wilk)
+
+    # Random Forest hyperparameters
+    RF_N_ESTIMATORS = 100  # Number of trees in the forest
+    RF_MAX_DEPTH = None  # Maximum depth of the tree (None = unlimited)
+    RF_MIN_SAMPLES_SPLIT = 2  # Minimum number of samples required to split an internal node
+    RF_MIN_SAMPLES_LEAF = 1  # Minimum number of samples required to be at a leaf node
+    RF_MAX_FEATURES = 'sqrt'  # Number of features to consider when looking for the best split
+    RF_BOOTSTRAP = True  # Whether bootstrap samples are used when building trees
+    RF_CRITERION = 'gini'  # Function to measure the quality of a split ('gini' or 'entropy')
 
     # Visualization and plotting parameters
     PLOT_DPI = 300  # Resolution for saved plots
@@ -459,6 +475,95 @@ class Config:
             raise ValueError(
                 f"SESSION_GAP_MINUTES doit être strictement positif, "
                 f"reçu: {self.SESSION_GAP_MINUTES}"
+            )
+
+        # Type checking for Random Forest hyperparameters
+        if not isinstance(self.RF_N_ESTIMATORS, int):
+            raise TypeError(
+                f"RF_N_ESTIMATORS doit être un entier (int), "
+                f"reçu: {type(self.RF_N_ESTIMATORS).__name__}"
+            )
+
+        if self.RF_MAX_DEPTH is not None and not isinstance(self.RF_MAX_DEPTH, int):
+            raise TypeError(
+                f"RF_MAX_DEPTH doit être un entier (int) ou None, "
+                f"reçu: {type(self.RF_MAX_DEPTH).__name__}"
+            )
+
+        if not isinstance(self.RF_MIN_SAMPLES_SPLIT, int):
+            raise TypeError(
+                f"RF_MIN_SAMPLES_SPLIT doit être un entier (int), "
+                f"reçu: {type(self.RF_MIN_SAMPLES_SPLIT).__name__}"
+            )
+
+        if not isinstance(self.RF_MIN_SAMPLES_LEAF, int):
+            raise TypeError(
+                f"RF_MIN_SAMPLES_LEAF doit être un entier (int), "
+                f"reçu: {type(self.RF_MIN_SAMPLES_LEAF).__name__}"
+            )
+
+        if not isinstance(self.RF_MAX_FEATURES, (str, int, float)):
+            raise TypeError(
+                f"RF_MAX_FEATURES doit être une chaîne (str), un entier (int) ou un flottant (float), "
+                f"reçu: {type(self.RF_MAX_FEATURES).__name__}"
+            )
+
+        if not isinstance(self.RF_BOOTSTRAP, bool):
+            raise TypeError(
+                f"RF_BOOTSTRAP doit être un booléen (bool), "
+                f"reçu: {type(self.RF_BOOTSTRAP).__name__}"
+            )
+
+        if not isinstance(self.RF_CRITERION, str):
+            raise TypeError(
+                f"RF_CRITERION doit être une chaîne (str), "
+                f"reçu: {type(self.RF_CRITERION).__name__}"
+            )
+
+        # Validate Random Forest hyperparameters
+        if self.RF_N_ESTIMATORS <= 0:
+            raise ValueError(
+                f"RF_N_ESTIMATORS doit être strictement positif, "
+                f"reçu: {self.RF_N_ESTIMATORS}"
+            )
+
+        if self.RF_MAX_DEPTH is not None and self.RF_MAX_DEPTH <= 0:
+            raise ValueError(
+                f"RF_MAX_DEPTH doit être strictement positif ou None, "
+                f"reçu: {self.RF_MAX_DEPTH}"
+            )
+
+        if self.RF_MIN_SAMPLES_SPLIT < 2:
+            raise ValueError(
+                f"RF_MIN_SAMPLES_SPLIT doit être au moins 2, "
+                f"reçu: {self.RF_MIN_SAMPLES_SPLIT}"
+            )
+
+        if self.RF_MIN_SAMPLES_LEAF < 1:
+            raise ValueError(
+                f"RF_MIN_SAMPLES_LEAF doit être au moins 1, "
+                f"reçu: {self.RF_MIN_SAMPLES_LEAF}"
+            )
+
+        if isinstance(self.RF_MAX_FEATURES, str):
+            valid_max_features = ['sqrt', 'log2', 'auto']
+            if self.RF_MAX_FEATURES not in valid_max_features:
+                raise ValueError(
+                    f"RF_MAX_FEATURES doit être l'un de {valid_max_features} ou un nombre, "
+                    f"reçu: {self.RF_MAX_FEATURES}"
+                )
+        elif isinstance(self.RF_MAX_FEATURES, (int, float)):
+            if self.RF_MAX_FEATURES <= 0:
+                raise ValueError(
+                    f"RF_MAX_FEATURES doit être strictement positif, "
+                    f"reçu: {self.RF_MAX_FEATURES}"
+                )
+
+        valid_criteria = ['gini', 'entropy']
+        if self.RF_CRITERION not in valid_criteria:
+            raise ValueError(
+                f"RF_CRITERION doit être l'un de {valid_criteria}, "
+                f"reçu: {self.RF_CRITERION}"
             )
 
     def export_defaults(self, file_path):
