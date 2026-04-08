@@ -23,6 +23,7 @@ __status__ = "Production"
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
@@ -647,3 +648,68 @@ class RegressionModel:
         fig.tight_layout()
 
         return fig
+
+    def check_residuals_normality(self, X, y):
+        """
+        Teste la normalité des résidus du modèle de régression à l'aide du test de Shapiro-Wilk.
+
+        Le test de Shapiro-Wilk évalue si les résidus suivent une distribution normale,
+        ce qui est une hypothèse importante de la régression linéaire. Un p-value > 0.05
+        suggère que les résidus suivent une distribution normale (hypothèse nulle non rejetée).
+
+        Le test retourne :
+        - test_statistic : La statistique W du test (entre 0 et 1, proche de 1 indique normalité)
+        - p_value : La probabilité d'observer les données si elles suivent une loi normale
+                   (p > 0.05 : résidus normaux, p <= 0.05 : résidus non normaux)
+
+        Args:
+            X (pd.DataFrame ou np.ndarray): Les features pour lesquelles tester la normalité.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+                Doit avoir le même nombre de features que les données d'entraînement.
+            y (pd.Series ou np.ndarray): Les valeurs cibles réelles.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Returns:
+            dict: Dictionnaire contenant les résultats du test de Shapiro-Wilk :
+                - 'test_statistic' (float): La statistique W du test de Shapiro-Wilk.
+                - 'p_value' (float): La p-value associée au test.
+
+        Raises:
+            ValueError: Si le modèle n'a pas été entraîné, si X ou y sont vides,
+                       ou si leurs dimensions sont incompatibles.
+        """
+        # Vérifier que le modèle a été entraîné
+        if self.model is None:
+            raise ValueError(
+                "Le modèle n'a pas encore été entraîné. "
+                "Veuillez appeler la méthode fit() avant de tester la normalité des résidus."
+            )
+
+        # Validation des entrées
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Calculer les résidus
+        residuals = self.compute_residuals(X, y)
+
+        # Effectuer le test de Shapiro-Wilk
+        test_statistic, p_value = stats.shapiro(residuals)
+
+        # Retourner les résultats sous forme de dictionnaire
+        return {
+            'test_statistic': float(test_statistic),
+            'p_value': float(p_value)
+        }
