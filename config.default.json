@@ -97,6 +97,36 @@
   "RANDOM_STATE": 42,
   "_RANDOM_STATE_description": "Graine aléatoire pour la reproductibilité des résultats",
 
+  "RF_N_ESTIMATORS": 100,
+  "_RF_N_ESTIMATORS_description": "Nombre d'arbres dans la forêt aléatoire (Random Forest)",
+
+  "RF_MAX_DEPTH": null,
+  "_RF_MAX_DEPTH_description": "Profondeur maximale des arbres (null = illimitée)",
+
+  "RF_MIN_SAMPLES_SPLIT": 2,
+  "_RF_MIN_SAMPLES_SPLIT_description": "Nombre minimum d'échantillons requis pour diviser un noeud interne",
+
+  "RF_MIN_SAMPLES_LEAF": 1,
+  "_RF_MIN_SAMPLES_LEAF_description": "Nombre minimum d'échantillons requis pour être dans une feuille",
+
+  "RF_MAX_FEATURES": "sqrt",
+  "_RF_MAX_FEATURES_description": "Nombre de features à considérer pour la meilleure division ('sqrt', 'log2', 'auto', ou un nombre)",
+
+  "RF_BOOTSTRAP": true,
+  "_RF_BOOTSTRAP_description": "Utiliser des échantillons bootstrap lors de la construction des arbres",
+
+  "RF_CRITERION": "gini",
+  "_RF_CRITERION_description": "Fonction pour mesurer la qualité d'une division ('gini' ou 'entropy')",
+
+  "GB_N_ESTIMATORS": 100,
+  "_GB_N_ESTIMATORS_description": "Nombre d'étapes de boosting pour Gradient Boosting",
+
+  "GB_LEARNING_RATE": 0.1,
+  "_GB_LEARNING_RATE_description": "Taux d'apprentissage pour Gradient Boosting (shrinks contribution of each tree)",
+
+  "GB_MAX_DEPTH": 3,
+  "_GB_MAX_DEPTH_description": "Profondeur maximale des estimateurs individuels pour Gradient Boosting",
+
   "PLOT_DPI": 300,
   "_PLOT_DPI_description": "Résolution en DPI pour les graphiques sauvegardés",
 
