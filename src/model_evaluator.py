@@ -700,3 +700,89 @@ class ModelEvaluator:
             'metrics': best_metrics,
             'all_metrics': all_metrics
         }
+
+    def export_results(self, output_dir):
+        """
+        Exporte les résultats de comparaison (tableau et graphiques) dans un répertoire.
+
+        Cette méthode génère et sauvegarde tous les résultats de l'évaluation comparative
+        des modèles dans le répertoire spécifié. Elle crée automatiquement le répertoire
+        s'il n'existe pas, puis exporte :
+        - Le tableau de comparaison des métriques au format CSV
+        - Le graphique des prédictions vs valeurs réelles au format PNG
+        - Le graphique de distribution des résidus au format PNG
+        - Le graphique de comparaison des métriques au format PNG
+
+        Les fichiers générés sont :
+        - comparison_table.csv : Tableau avec toutes les métriques (R², RMSE, MAE, R² ajusté)
+        - predictions_comparison.png : Graphiques de prédictions pour chaque modèle
+        - residuals_comparison.png : Distributions des résidus pour chaque modèle
+        - metrics_comparison.png : Graphique à barres comparant les métriques
+
+        Args:
+            output_dir (str): Chemin du répertoire de sortie où sauvegarder les résultats.
+                Le répertoire sera créé s'il n'existe pas.
+
+        Raises:
+            ValueError: Si output_dir est vide ou None.
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+            OSError: Si le répertoire ne peut pas être créé (permissions insuffisantes, etc.).
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> evaluator.export_results('output/comparison')
+            >>> # Les fichiers sont créés dans output/comparison/
+
+            >>> # Avec un répertoire temporaire
+            >>> import tempfile
+            >>> with tempfile.TemporaryDirectory() as tmpdir:
+            ...     evaluator.export_results(tmpdir)
+            ...     # Les fichiers sont créés dans tmpdir/
+        """
+        import os
+
+        # Validation du répertoire de sortie
+        if not output_dir or not isinstance(output_dir, str):
+            raise ValueError("Le répertoire de sortie doit être une chaîne non vide.")
+
+        # Créer le répertoire s'il n'existe pas
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+        except OSError as e:
+            raise OSError(
+                f"Impossible de créer le répertoire '{output_dir}': {e}"
+            )
+
+        # 1. Exporter le tableau de comparaison en CSV
+        comparison_table = self.get_comparison_table()
+        csv_path = os.path.join(output_dir, 'comparison_table.csv')
+        comparison_table.to_csv(csv_path)
+
+        # 2. Exporter le graphique des prédictions
+        predictions_fig = self.plot_predictions()
+        predictions_path = os.path.join(
+            output_dir,
+            f'predictions_comparison.{self.config.PLOT_SAVE_FORMAT}'
+        )
+        predictions_fig.savefig(predictions_path, dpi=self.config.PLOT_DPI, bbox_inches='tight')
+        plt.close(predictions_fig)
+
+        # 3. Exporter le graphique des résidus
+        residuals_fig = self.plot_residuals()
+        residuals_path = os.path.join(
+            output_dir,
+            f'residuals_comparison.{self.config.PLOT_SAVE_FORMAT}'
+        )
+        residuals_fig.savefig(residuals_path, dpi=self.config.PLOT_DPI, bbox_inches='tight')
+        plt.close(residuals_fig)
+
+        # 4. Exporter le graphique de comparaison des métriques
+        metrics_fig = self.plot_metrics_comparison()
+        metrics_path = os.path.join(
+            output_dir,
+            f'metrics_comparison.{self.config.PLOT_SAVE_FORMAT}'
+        )
+        metrics_fig.savefig(metrics_path, dpi=self.config.PLOT_DPI, bbox_inches='tight')
+        plt.close(metrics_fig)
