@@ -525,3 +525,92 @@ class ModelEvaluator:
         fig.tight_layout()
 
         return fig
+
+    def plot_metrics_comparison(self, include_adjusted_r2=True):
+        """
+        Crée un graphique à barres comparant les métriques de tous les modèles.
+
+        Cette méthode génère un graphique à barres groupées où chaque groupe représente
+        un modèle et chaque barre dans le groupe représente une métrique de performance
+        différente (R², RMSE, MAE, et optionnellement R² ajusté). Cela permet une
+        comparaison visuelle rapide des performances de tous les modèles enregistrés.
+
+        Le graphique comprend :
+        - L'axe x avec les noms des modèles
+        - Des barres groupées pour chaque métrique (R², RMSE, MAE, R² ajusté)
+        - Une légende identifiant chaque métrique
+        - Des labels et titres en français
+        - Une grille pour faciliter la lecture des valeurs
+
+        Args:
+            include_adjusted_r2 (bool, optional): Si True, inclut le R² ajusté dans le graphique.
+                Par défaut True.
+
+        Returns:
+            matplotlib.figure.Figure: La figure matplotlib contenant le graphique à barres.
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> fig = evaluator.plot_metrics_comparison()
+            >>> fig.savefig('metrics_comparison.png')
+
+            >>> # Sans le R² ajusté
+            >>> fig = evaluator.plot_metrics_comparison(include_adjusted_r2=False)
+        """
+        # Obtenir les métriques de tous les modèles
+        metrics_dict = self.evaluate_all()
+
+        # Extraire les noms des modèles et les métriques
+        model_names = list(metrics_dict.keys())
+        n_models = len(model_names)
+
+        # Déterminer quelles métriques afficher
+        if include_adjusted_r2:
+            metric_keys = ['r2', 'rmse', 'mae', 'adjusted_r2']
+            metric_labels = ['R²', 'RMSE', 'MAE', 'R² ajusté']
+        else:
+            metric_keys = ['r2', 'rmse', 'mae']
+            metric_labels = ['R²', 'RMSE', 'MAE']
+
+        n_metrics = len(metric_keys)
+
+        # Préparer les données pour chaque métrique
+        metric_data = {key: [] for key in metric_keys}
+        for model_name in model_names:
+            for key in metric_keys:
+                metric_data[key].append(metrics_dict[model_name][key])
+
+        # Configurer la position des barres
+        x = np.arange(n_models)  # Positions des groupes de modèles
+        width = 0.2  # Largeur de chaque barre
+        offset = width * (n_metrics - 1) / 2  # Offset pour centrer les groupes
+
+        # Créer la figure et l'axe
+        fig, ax = plt.subplots(figsize=(max(8, n_models * 1.5), 6))
+
+        # Créer les barres pour chaque métrique
+        colors = ['#2ecc71', '#e74c3c', '#f39c12', '#3498db']  # Vert, Rouge, Orange, Bleu
+        for i, (key, label) in enumerate(zip(metric_keys, metric_labels)):
+            bar_position = x - offset + i * width
+            ax.bar(bar_position, metric_data[key], width,
+                  label=label, color=colors[i], alpha=0.8, edgecolor='black', linewidth=0.5)
+
+        # Configurer les labels et le titre
+        ax.set_xlabel('Modèles', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Valeur de la métrique', fontsize=12, fontweight='bold')
+        ax.set_title('Comparaison des métriques de performance par modèle',
+                    fontsize=14, fontweight='bold')
+        ax.set_xticks(x)
+        ax.set_xticklabels(model_names, rotation=45, ha='right')
+        ax.legend(loc='best', fontsize=10)
+        ax.grid(True, alpha=0.3, axis='y')
+
+        # Ajuster la mise en page pour éviter le chevauchement
+        fig.tight_layout()
+
+        return fig
