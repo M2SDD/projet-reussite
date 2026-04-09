@@ -23,6 +23,7 @@ __status__ = "Production"
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy import stats
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 from .config import Config
@@ -401,6 +402,119 @@ class ModelEvaluator:
             ax.set_ylabel('Valeurs prédites', fontsize=12)
             ax.set_title(f'{name}\n(R² = {r2:.4f})', fontsize=14, fontweight='bold')
             ax.legend()
+            ax.grid(True, alpha=0.3)
+
+        # Masquer les axes vides s'il y en a
+        for idx in range(n_models, len(axes)):
+            axes[idx].set_visible(False)
+
+        # Ajuster la mise en page
+        fig.tight_layout()
+
+        return fig
+
+    def plot_residuals(self):
+        """
+        Crée des graphiques de distribution des résidus pour tous les modèles.
+
+        Cette méthode génère une grille de sous-graphiques (subplots) où chaque graphique
+        représente un modèle et affiche la distribution de ses résidus (différences entre
+        valeurs réelles et valeurs prédites). Chaque graphique comprend :
+        - Un histogramme des résidus normalisé (densité de probabilité)
+        - Une courbe de distribution normale théorique superposée
+        - Une ligne verticale à x=0 indiquant la moyenne des résidus
+        - Des labels et titres en français
+
+        Les résidus sont calculés comme : résidus = valeurs réelles - valeurs prédites
+        Une distribution proche de la normale centrée en 0 indique un bon modèle.
+
+        La grille de sous-graphiques est automatiquement dimensionnée en fonction du nombre
+        de modèles enregistrés, avec un maximum de 3 colonnes par ligne.
+
+        Returns:
+            matplotlib.figure.Figure: La figure matplotlib contenant tous les graphiques.
+                La figure contient une grille de sous-graphiques avec un graphique par modèle.
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> fig = evaluator.plot_residuals()
+            >>> fig.savefig('residuals.png')
+        """
+        # Vérifier qu'il y a au moins un modèle avec des données d'évaluation
+        models_with_data = {
+            name: data for name, data in self.models.items()
+            if data['X'] is not None and data['y'] is not None
+        }
+
+        if not models_with_data:
+            raise ValueError(
+                "Aucun modèle avec données d'évaluation n'a été enregistré. "
+                "Veuillez utiliser la méthode add_model() pour enregistrer des modèles "
+                "avec leurs données d'évaluation."
+            )
+
+        # Calculer la disposition de la grille de sous-graphiques
+        n_models = len(models_with_data)
+        n_cols = min(3, n_models)  # Maximum 3 colonnes
+        n_rows = (n_models + n_cols - 1) // n_cols  # Division arrondie vers le haut
+
+        # Créer la figure et les axes
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+
+        # S'assurer que axes est toujours un tableau, même avec un seul subplot
+        if n_models == 1:
+            axes = np.array([axes])
+        axes = axes.flatten()
+
+        # Créer un graphique pour chaque modèle
+        for idx, (name, model_data) in enumerate(models_with_data.items()):
+            model = model_data['model']
+            X = model_data['X']
+            y = model_data['y']
+
+            # Faire les prédictions
+            y_pred = model.predict(X)
+
+            # Calculer les résidus
+            residuals = y - y_pred
+
+            # Obtenir l'axe courant
+            ax = axes[idx]
+
+            # Tracer l'histogramme des résidus (normalisé en densité)
+            n, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7,
+                                       color='skyblue', edgecolor='black', linewidth=0.5)
+
+            # Calculer la courbe de distribution normale théorique
+            mu = np.mean(residuals)
+            sigma = np.std(residuals)
+
+            # Générer les points pour la courbe normale
+            x_range = np.linspace(residuals.min(), residuals.max(), 100)
+            normal_curve = stats.norm.pdf(x_range, mu, sigma)
+
+            # Tracer la courbe normale
+            ax.plot(x_range, normal_curve, 'r-', linewidth=2,
+                   label=f'Distribution normale\n(μ={mu:.4f}, σ={sigma:.4f})')
+
+            # Ajouter une ligne verticale à x=0 (résidu moyen idéal)
+            ax.axvline(x=0, color='green', linestyle='--', linewidth=2,
+                      label='Résidu moyen idéal (0)')
+
+            # Ajouter une ligne verticale à la moyenne réelle des résidus
+            ax.axvline(x=mu, color='orange', linestyle='--', linewidth=2,
+                      label=f'Résidu moyen ({mu:.4f})')
+
+            # Configurer les labels et le titre
+            ax.set_xlabel('Résidus (Réel - Prédit)', fontsize=12)
+            ax.set_ylabel('Densité de probabilité', fontsize=12)
+            ax.set_title(f'Distribution des résidus - {name}', fontsize=14, fontweight='bold')
+            ax.legend(fontsize=9)
             ax.grid(True, alpha=0.3)
 
         # Masquer les axes vides s'il y en a
