@@ -410,6 +410,104 @@ class TestPlotPredictions:
         with pytest.raises(ValueError, match="Aucun modèle avec données d'évaluation"):
             evaluator.plot_predictions()
 
+    def test_plot_predictions_figure_properties(self, evaluator, trained_model, sample_data):
+        """Test that prediction plots have correct figure properties."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_predictions()
+
+        # Check that figure has axes
+        assert len(fig.axes) >= 1
+
+        # Check the first axis
+        ax = fig.axes[0]
+        assert ax.get_xlabel() == 'Valeurs réelles'
+        assert ax.get_ylabel() == 'Valeurs prédites'
+        assert 'test_model' in ax.get_title()
+        assert 'R²' in ax.get_title()
+
+        # Check that legend exists
+        legend = ax.get_legend()
+        assert legend is not None
+
+        plt.close(fig)
+
+    def test_plot_predictions_grid_layout(self, evaluator, trained_model, second_trained_model, sample_data):
+        """Test grid layout with multiple models."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+        X_reduced = sample_data[['feature_1', 'feature_2']]
+
+        # Add 4 models to test grid layout
+        evaluator.add_model('model1', trained_model, X, y)
+        evaluator.add_model('model2', second_trained_model, X_reduced, y)
+        evaluator.add_model('model3', trained_model, X, y)
+        evaluator.add_model('model4', second_trained_model, X_reduced, y)
+
+        fig = evaluator.plot_predictions()
+
+        # Should have 4 axes (2 rows, 2 columns for 4 models)
+        # Actually, with n_cols = min(3, 4) = 3, and n_rows = ceil(4/3) = 2
+        # Total axes = 2 * 3 = 6, but only 4 visible
+        assert len(fig.axes) >= 4
+
+        # Check that first 4 axes are visible
+        for i in range(4):
+            assert fig.axes[i].get_visible()
+
+        plt.close(fig)
+
+    def test_plot_predictions_scatter_data(self, evaluator, trained_model, sample_data):
+        """Test that scatter plot contains correct data points."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_predictions()
+
+        ax = fig.axes[0]
+
+        # Get scatter plot data (first collection should be the scatter)
+        collections = ax.collections
+        assert len(collections) > 0
+
+        # Check that number of points matches data length
+        scatter = collections[0]
+        assert len(scatter.get_offsets()) == len(y)
+
+        plt.close(fig)
+
+    def test_plot_predictions_reference_line(self, evaluator, trained_model, sample_data):
+        """Test that diagonal reference line (y=x) is present."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_predictions()
+
+        ax = fig.axes[0]
+
+        # Check that there are line plots (reference line)
+        lines = ax.get_lines()
+        assert len(lines) > 0
+
+        # Check that at least one line is diagonal (y=x)
+        # This is the perfect prediction line
+        found_diagonal = False
+        for line in lines:
+            xdata = line.get_xdata()
+            ydata = line.get_ydata()
+            # Check if line is diagonal (all x == y)
+            if len(xdata) > 0 and np.allclose(xdata, ydata):
+                found_diagonal = True
+                break
+
+        assert found_diagonal
+
+        plt.close(fig)
+
 
 class TestPlotResiduals:
     """Test plot_residuals functionality."""
@@ -439,6 +537,115 @@ class TestPlotResiduals:
         with pytest.raises(ValueError, match="Aucun modèle avec données d'évaluation"):
             evaluator.plot_residuals()
 
+    def test_plot_residuals_figure_properties(self, evaluator, trained_model, sample_data):
+        """Test that residuals plots have correct figure properties."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_residuals()
+
+        # Check that figure has axes
+        assert len(fig.axes) >= 1
+
+        # Check the first axis
+        ax = fig.axes[0]
+        assert ax.get_xlabel() == 'Résidus (Réel - Prédit)'
+        assert ax.get_ylabel() == 'Densité de probabilité'
+        assert 'Distribution des résidus' in ax.get_title()
+        assert 'test_model' in ax.get_title()
+
+        # Check that legend exists
+        legend = ax.get_legend()
+        assert legend is not None
+
+        plt.close(fig)
+
+    def test_plot_residuals_histogram_present(self, evaluator, trained_model, sample_data):
+        """Test that histogram is present in residuals plot."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_residuals()
+
+        ax = fig.axes[0]
+
+        # Check that histogram patches exist
+        patches = ax.patches
+        assert len(patches) > 0  # Should have histogram bars
+
+        plt.close(fig)
+
+    def test_plot_residuals_normal_curve(self, evaluator, trained_model, sample_data):
+        """Test that normal distribution curve is plotted."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_residuals()
+
+        ax = fig.axes[0]
+
+        # Check that there are line plots (normal curve and reference lines)
+        lines = ax.get_lines()
+        assert len(lines) >= 1  # Should have at least the normal curve
+
+        plt.close(fig)
+
+    def test_plot_residuals_reference_lines(self, evaluator, trained_model, sample_data):
+        """Test that reference lines (x=0, mean) are present."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_residuals()
+
+        ax = fig.axes[0]
+
+        # Check for vertical lines (axvline creates Line2D objects)
+        lines = ax.get_lines()
+        # Should have: normal curve + ideal zero line + actual mean line
+        assert len(lines) >= 3
+
+        plt.close(fig)
+
+    def test_plot_residuals_grid_layout(self, evaluator, trained_model, second_trained_model, sample_data):
+        """Test grid layout with multiple models."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+        X_reduced = sample_data[['feature_1', 'feature_2']]
+
+        # Add 3 models to test grid layout
+        evaluator.add_model('model1', trained_model, X, y)
+        evaluator.add_model('model2', second_trained_model, X_reduced, y)
+        evaluator.add_model('model3', trained_model, X, y)
+
+        fig = evaluator.plot_residuals()
+
+        # Should have 3 axes in one row
+        assert len(fig.axes) >= 3
+
+        # Check that first 3 axes are visible
+        for i in range(3):
+            assert fig.axes[i].get_visible()
+
+        plt.close(fig)
+
+    def test_plot_residuals_data_validity(self, evaluator, trained_model, large_sample_data):
+        """Test residuals plot with larger dataset for statistical validity."""
+        X = large_sample_data.drop(columns=['note'])
+        y = large_sample_data['note']
+
+        evaluator.add_model('test_model', trained_model, X, y)
+        fig = evaluator.plot_residuals()
+
+        # Should not raise any errors with larger dataset
+        assert fig is not None
+        assert isinstance(fig, matplotlib.figure.Figure)
+
+        plt.close(fig)
+
 
 class TestPlotMetricsComparison:
     """Test plot_metrics_comparison functionality."""
@@ -463,6 +670,146 @@ class TestPlotMetricsComparison:
         """Test error when no models have evaluation data."""
         with pytest.raises(ValueError, match="Aucun modèle avec données d'évaluation"):
             evaluator.plot_metrics_comparison()
+
+    def test_plot_metrics_comparison_figure_properties(self, evaluator_with_models):
+        """Test that metrics comparison has correct figure properties."""
+        fig = evaluator_with_models.plot_metrics_comparison()
+
+        # Check that figure has exactly one axis (bar chart)
+        assert len(fig.axes) == 1
+
+        ax = fig.axes[0]
+        assert ax.get_xlabel() == 'Modèles'
+        assert ax.get_ylabel() == 'Valeur de la métrique'
+        assert 'Comparaison des métriques' in ax.get_title()
+
+        # Check that legend exists
+        legend = ax.get_legend()
+        assert legend is not None
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_bar_count_with_adjusted_r2(self, evaluator_with_models):
+        """Test correct number of bars with adjusted R²."""
+        fig = evaluator_with_models.plot_metrics_comparison(include_adjusted_r2=True)
+
+        ax = fig.axes[0]
+
+        # Get all bar patches
+        patches = [p for p in ax.patches if isinstance(p, matplotlib.patches.Rectangle)]
+
+        # With 2 models and 4 metrics (R², RMSE, MAE, adjusted R²), should have 8 bars
+        assert len(patches) == 8
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_bar_count_without_adjusted_r2(self, evaluator_with_models):
+        """Test correct number of bars without adjusted R²."""
+        fig = evaluator_with_models.plot_metrics_comparison(include_adjusted_r2=False)
+
+        ax = fig.axes[0]
+
+        # Get all bar patches
+        patches = [p for p in ax.patches if isinstance(p, matplotlib.patches.Rectangle)]
+
+        # With 2 models and 3 metrics (R², RMSE, MAE), should have 6 bars
+        assert len(patches) == 6
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_legend_labels_with_adjusted_r2(self, evaluator_with_models):
+        """Test legend labels when including adjusted R²."""
+        fig = evaluator_with_models.plot_metrics_comparison(include_adjusted_r2=True)
+
+        ax = fig.axes[0]
+        legend = ax.get_legend()
+
+        # Get legend text labels
+        legend_labels = [text.get_text() for text in legend.get_texts()]
+
+        # Should have 4 metrics
+        assert len(legend_labels) == 4
+        assert 'R²' in legend_labels
+        assert 'RMSE' in legend_labels
+        assert 'MAE' in legend_labels
+        assert 'R² ajusté' in legend_labels
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_legend_labels_without_adjusted_r2(self, evaluator_with_models):
+        """Test legend labels when excluding adjusted R²."""
+        fig = evaluator_with_models.plot_metrics_comparison(include_adjusted_r2=False)
+
+        ax = fig.axes[0]
+        legend = ax.get_legend()
+
+        # Get legend text labels
+        legend_labels = [text.get_text() for text in legend.get_texts()]
+
+        # Should have 3 metrics
+        assert len(legend_labels) == 3
+        assert 'R²' in legend_labels
+        assert 'RMSE' in legend_labels
+        assert 'MAE' in legend_labels
+        assert 'R² ajusté' not in legend_labels
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_single_model(self, evaluator, trained_model, sample_data):
+        """Test metrics comparison with single model."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('single_model', trained_model, X, y)
+        fig = evaluator.plot_metrics_comparison()
+
+        # Should work with single model
+        assert fig is not None
+        assert isinstance(fig, matplotlib.figure.Figure)
+
+        ax = fig.axes[0]
+        patches = [p for p in ax.patches if isinstance(p, matplotlib.patches.Rectangle)]
+
+        # With 1 model and 4 metrics, should have 4 bars
+        assert len(patches) == 4
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_many_models(self, evaluator, trained_model, sample_data):
+        """Test metrics comparison with many models."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        # Add 5 models
+        for i in range(5):
+            evaluator.add_model(f'model_{i}', trained_model, X, y)
+
+        fig = evaluator.plot_metrics_comparison()
+
+        # Should work with many models
+        assert fig is not None
+        assert isinstance(fig, matplotlib.figure.Figure)
+
+        ax = fig.axes[0]
+
+        # With 5 models and 4 metrics, should have 20 bars
+        patches = [p for p in ax.patches if isinstance(p, matplotlib.patches.Rectangle)]
+        assert len(patches) == 20
+
+        plt.close(fig)
+
+    def test_plot_metrics_comparison_x_tick_labels(self, evaluator_with_models):
+        """Test that model names appear as x-tick labels."""
+        fig = evaluator_with_models.plot_metrics_comparison()
+
+        ax = fig.axes[0]
+        x_labels = [label.get_text() for label in ax.get_xticklabels()]
+
+        # Should contain both model names
+        assert 'model_full' in x_labels
+        assert 'model_reduced' in x_labels
+
+        plt.close(fig)
 
 
 class TestGetRecommendation:
@@ -533,6 +880,142 @@ class TestExportResults:
 
             assert os.path.exists(output_dir)
             assert os.path.exists(os.path.join(output_dir, 'comparison_table.csv'))
+
+    def test_export_results_csv_content(self, evaluator_with_models):
+        """Test that exported CSV contains correct data."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator_with_models.export_results(tmpdir)
+
+            csv_path = os.path.join(tmpdir, 'comparison_table.csv')
+            df = pd.read_csv(csv_path, index_col=0)
+
+            # Check that CSV has correct structure
+            assert 'model_full' in df.index
+            assert 'model_reduced' in df.index
+            assert 'r2' in df.columns
+            assert 'rmse' in df.columns
+            assert 'mae' in df.columns
+            assert 'adjusted_r2' in df.columns
+
+            # Check that values are numeric
+            for col in df.columns:
+                assert pd.api.types.is_numeric_dtype(df[col])
+
+    def test_export_results_png_files_valid(self, evaluator_with_models):
+        """Test that exported PNG files are valid images."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator_with_models.export_results(tmpdir)
+
+            # Check file sizes (should be non-zero)
+            predictions_path = os.path.join(tmpdir, 'predictions_comparison.png')
+            residuals_path = os.path.join(tmpdir, 'residuals_comparison.png')
+            metrics_path = os.path.join(tmpdir, 'metrics_comparison.png')
+
+            assert os.path.getsize(predictions_path) > 0
+            assert os.path.getsize(residuals_path) > 0
+            assert os.path.getsize(metrics_path) > 0
+
+    def test_export_results_nested_directory(self, evaluator_with_models):
+        """Test exporting to nested directory structure."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = os.path.join(tmpdir, 'level1', 'level2', 'output')
+            evaluator_with_models.export_results(output_dir)
+
+            # Check that nested directory was created
+            assert os.path.exists(output_dir)
+            assert os.path.exists(os.path.join(output_dir, 'comparison_table.csv'))
+
+    def test_export_results_file_format(self, evaluator_with_models):
+        """Test that files are exported in correct format."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator_with_models.export_results(tmpdir)
+
+            # CSV file should be readable
+            csv_path = os.path.join(tmpdir, 'comparison_table.csv')
+            df = pd.read_csv(csv_path, index_col=0)
+            assert not df.empty
+
+            # PNG files should have PNG signature
+            predictions_path = os.path.join(tmpdir, 'predictions_comparison.png')
+            with open(predictions_path, 'rb') as f:
+                # PNG files start with specific magic bytes
+                magic = f.read(8)
+                assert magic == b'\x89PNG\r\n\x1a\n'
+
+    def test_export_results_single_model(self, evaluator, trained_model, sample_data):
+        """Test exporting results with single model."""
+        X = sample_data.drop(columns=['note'])
+        y = sample_data['note']
+
+        evaluator.add_model('single_model', trained_model, X, y)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator.export_results(tmpdir)
+
+            # All files should be created even with single model
+            assert os.path.exists(os.path.join(tmpdir, 'comparison_table.csv'))
+            assert os.path.exists(os.path.join(tmpdir, 'predictions_comparison.png'))
+            assert os.path.exists(os.path.join(tmpdir, 'residuals_comparison.png'))
+            assert os.path.exists(os.path.join(tmpdir, 'metrics_comparison.png'))
+
+    def test_export_results_overwrite_existing(self, evaluator_with_models):
+        """Test that export can overwrite existing files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Export first time
+            evaluator_with_models.export_results(tmpdir)
+
+            # Get file modification times
+            csv_path = os.path.join(tmpdir, 'comparison_table.csv')
+            first_mtime = os.path.getmtime(csv_path)
+
+            # Wait a bit to ensure different timestamps
+            import time
+            time.sleep(0.1)
+
+            # Export again (should overwrite)
+            evaluator_with_models.export_results(tmpdir)
+
+            # File should still exist
+            assert os.path.exists(csv_path)
+
+            # Modification time should be updated (or at least not earlier)
+            second_mtime = os.path.getmtime(csv_path)
+            assert second_mtime >= first_mtime
+
+    def test_export_results_csv_readable(self, evaluator_with_models):
+        """Test that exported CSV is properly formatted and readable."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator_with_models.export_results(tmpdir)
+
+            csv_path = os.path.join(tmpdir, 'comparison_table.csv')
+
+            # Read CSV and verify structure
+            df = pd.read_csv(csv_path, index_col=0)
+
+            # Should have 2 models
+            assert len(df) == 2
+
+            # Should have 4 metric columns
+            assert len(df.columns) == 4
+
+            # All values should be numeric
+            assert df.select_dtypes(include=[np.number]).shape == df.shape
+
+    def test_export_results_with_custom_config(self, evaluator_with_models):
+        """Test export with custom configuration."""
+        # Modify config to use different format (if supported)
+        evaluator_with_models.config.PLOT_SAVE_FORMAT = 'png'
+        evaluator_with_models.config.PLOT_DPI = 100
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            evaluator_with_models.export_results(tmpdir)
+
+            # Files should use configured format
+            predictions_path = os.path.join(tmpdir, 'predictions_comparison.png')
+            assert os.path.exists(predictions_path)
+
+            # File should exist and be valid
+            assert os.path.getsize(predictions_path) > 0
 
 
 # ----------------------------------------------------------------------------------------------------------------------
