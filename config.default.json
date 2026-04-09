@@ -118,6 +118,15 @@
   "RF_CRITERION": "gini",
   "_RF_CRITERION_description": "Fonction pour mesurer la qualité d'une division ('gini' ou 'entropy')",
 
+  "GB_N_ESTIMATORS": 100,
+  "_GB_N_ESTIMATORS_description": "Nombre d'étapes de boosting pour Gradient Boosting",
+
+  "GB_LEARNING_RATE": 0.1,
+  "_GB_LEARNING_RATE_description": "Taux d'apprentissage pour Gradient Boosting (shrinks contribution of each tree)",
+
+  "GB_MAX_DEPTH": 3,
+  "_GB_MAX_DEPTH_description": "Profondeur maximale des estimateurs individuels pour Gradient Boosting",
+
   "PLOT_DPI": 300,
   "_PLOT_DPI_description": "Résolution en DPI pour les graphiques sauvegardés",
 

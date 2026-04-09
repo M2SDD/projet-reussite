@@ -115,8 +115,13 @@ class MLModel:
         """
         Entraîne le modèle de machine learning sur les données fournies.
 
-        Crée une instance de LinearRegression et l'entraîne avec les features (X)
+        Crée une instance de RandomForestRegressor ou GradientBoostingRegressor
+        selon le model_type spécifié, puis l'entraîne avec les features (X)
         et la variable cible (y). Le modèle entraîné est stocké dans self.model.
+
+        Les hyperparamètres sont chargés depuis self.config:
+        - Random Forest: RF_N_ESTIMATORS, RF_MAX_DEPTH, RF_MIN_SAMPLES_SPLIT, etc.
+        - Gradient Boosting: GB_N_ESTIMATORS, GB_LEARNING_RATE, GB_MAX_DEPTH
 
         Args:
             X (pd.DataFrame ou np.ndarray): Les features d'entraînement.
@@ -147,11 +152,25 @@ class MLModel:
                 f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
             )
 
-        # Créer et entraîner le modèle
+        # Créer et entraîner le modèle selon le type avec hyperparamètres du config
         if self.model_type == 'random_forest':
-            self.model = RandomForestRegressor()
+            self.model = RandomForestRegressor(
+                n_estimators=self.config.RF_N_ESTIMATORS,
+                max_depth=self.config.RF_MAX_DEPTH,
+                min_samples_split=self.config.RF_MIN_SAMPLES_SPLIT,
+                min_samples_leaf=self.config.RF_MIN_SAMPLES_LEAF,
+                max_features=self.config.RF_MAX_FEATURES,
+                bootstrap=self.config.RF_BOOTSTRAP,
+                random_state=self.config.RANDOM_STATE,
+                n_jobs=-1  # Use all CPU cores for training
+            )
         elif self.model_type == 'gradient_boosting':
-            self.model = GradientBoostingRegressor()
+            self.model = GradientBoostingRegressor(
+                n_estimators=getattr(self.config, 'GB_N_ESTIMATORS', 100),
+                learning_rate=getattr(self.config, 'GB_LEARNING_RATE', 0.1),
+                max_depth=getattr(self.config, 'GB_MAX_DEPTH', 3),
+                random_state=self.config.RANDOM_STATE
+            )
         else:
             raise ValueError(
                 f"model_type invalide: {self.model_type}"
@@ -198,11 +217,15 @@ class MLModel:
         """
         Extrait l'importance des features du modèle de machine learning entraîné.
 
-        Cette méthode calcule l'importance de chaque feature en utilisant les valeurs
-        absolues des coefficients du modèle. Pour un modèle de régression linéaire,
-        les coefficients représentent l'impact de chaque feature sur la prédiction.
-        Les valeurs absolues permettent de classer les features par ordre d'importance
-        sans tenir compte du signe (positif ou négatif) de l'effet.
+        Pour les modèles Random Forest et Gradient Boosting, cette méthode utilise
+        l'attribut feature_importances_ qui mesure l'importance moyenne de chaque
+        feature basée sur la réduction de l'impureté (Gini importance). Les valeurs
+        sont déjà normalisées et somment à 1.0.
+
+        Cette méthode est différente de celle de RegressionModel qui utilise les
+        coefficients de régression linéaire. Les feature importances des modèles
+        basés sur des arbres capturent mieux les relations non-linéaires et les
+        interactions entre features.
 
         Args:
             feature_names (pd.Index ou list): Les noms des features.
@@ -212,7 +235,7 @@ class MLModel:
         Returns:
             pd.DataFrame: DataFrame contenant l'importance des features avec deux colonnes :
                 - 'feature' (str): Le nom de la feature.
-                - 'importance' (float): L'importance de la feature (valeur absolue du coefficient).
+                - 'importance' (float): L'importance de la feature (Gini importance).
                 Les lignes sont triées par ordre décroissant d'importance.
 
         Raises:
@@ -230,8 +253,17 @@ class MLModel:
         if feature_names is None or len(feature_names) == 0:
             raise ValueError("feature_names ne peut pas être vide.")
 
-        # Vérifier que le nombre de noms correspond au nombre de coefficients
-        n_features = len(self.model.coef_)
+        # Extraire les importances (disponible pour RandomForest et GradientBoosting)
+        if not hasattr(self.model, 'feature_importances_'):
+            raise ValueError(
+                f"Le modèle {type(self.model).__name__} ne supporte pas l'extraction "
+                f"d'importance des features."
+            )
+
+        importance_values = self.model.feature_importances_
+
+        # Vérifier que le nombre de noms correspond au nombre de features
+        n_features = len(importance_values)
         n_names = len(feature_names)
 
         if n_names != n_features:
@@ -239,9 +271,6 @@ class MLModel:
                 f"Le nombre de noms de features ({n_names}) ne correspond pas "
                 f"au nombre de features du modèle ({n_features})."
             )
-
-        # Calculer l'importance des features (valeurs absolues des coefficients)
-        importance_values = np.abs(self.model.coef_)
 
         # Créer un DataFrame avec les noms et les importances
         feature_importance = pd.DataFrame({

@@ -60,6 +60,9 @@ class Config:
         RF_MAX_FEATURES (str or int): Features à considérer pour la meilleure division (défaut: 'sqrt')
         RF_BOOTSTRAP (bool): Utilisation de bootstrap pour construire les arbres (défaut: True)
         RF_CRITERION (str): Fonction pour mesurer la qualité d'une division (défaut: 'gini')
+        GB_N_ESTIMATORS (int): Nombre d'étapes de boosting pour Gradient Boosting (défaut: 100)
+        GB_LEARNING_RATE (float): Taux d'apprentissage pour Gradient Boosting (défaut: 0.1)
+        GB_MAX_DEPTH (int): Profondeur maximale des estimateurs pour Gradient Boosting (défaut: 3)
         PLOT_DPI (int): Résolution des graphiques sauvegardés (défaut: 300)
         PLOT_FIGSIZE (tuple): Taille par défaut des figures (largeur, hauteur) en pouces
 
@@ -180,6 +183,11 @@ class Config:
     RF_MAX_FEATURES = 'sqrt'  # Number of features to consider when looking for the best split
     RF_BOOTSTRAP = True  # Whether bootstrap samples are used when building trees
     RF_CRITERION = 'gini'  # Function to measure the quality of a split ('gini' or 'entropy')
+
+    # Gradient Boosting hyperparameters
+    GB_N_ESTIMATORS = 100  # Number of boosting stages to perform
+    GB_LEARNING_RATE = 0.1  # Learning rate shrinks the contribution of each tree
+    GB_MAX_DEPTH = 3  # Maximum depth of the individual regression estimators
 
     # Visualization and plotting parameters
     PLOT_DPI = 300  # Resolution for saved plots
@@ -564,6 +572,43 @@ class Config:
             raise ValueError(
                 f"RF_CRITERION doit être l'un de {valid_criteria}, "
                 f"reçu: {self.RF_CRITERION}"
+            )
+
+        # Gradient Boosting hyperparameters validation
+        if not isinstance(self.GB_N_ESTIMATORS, int):
+            raise TypeError(
+                f"GB_N_ESTIMATORS doit être un entier (int), "
+                f"reçu: {type(self.GB_N_ESTIMATORS).__name__}"
+            )
+
+        if self.GB_N_ESTIMATORS <= 0:
+            raise ValueError(
+                f"GB_N_ESTIMATORS doit être strictement positif, "
+                f"reçu: {self.GB_N_ESTIMATORS}"
+            )
+
+        if not isinstance(self.GB_LEARNING_RATE, (int, float)):
+            raise TypeError(
+                f"GB_LEARNING_RATE doit être un nombre (int ou float), "
+                f"reçu: {type(self.GB_LEARNING_RATE).__name__}"
+            )
+
+        if self.GB_LEARNING_RATE <= 0 or self.GB_LEARNING_RATE > 1:
+            raise ValueError(
+                f"GB_LEARNING_RATE doit être entre 0 et 1 (exclusif de 0), "
+                f"reçu: {self.GB_LEARNING_RATE}"
+            )
+
+        if not isinstance(self.GB_MAX_DEPTH, int):
+            raise TypeError(
+                f"GB_MAX_DEPTH doit être un entier (int), "
+                f"reçu: {type(self.GB_MAX_DEPTH).__name__}"
+            )
+
+        if self.GB_MAX_DEPTH <= 0:
+            raise ValueError(
+                f"GB_MAX_DEPTH doit être strictement positif, "
+                f"reçu: {self.GB_MAX_DEPTH}"
             )
 
     def export_defaults(self, file_path):
