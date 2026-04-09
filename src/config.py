@@ -189,6 +189,46 @@ class Config:
     GB_LEARNING_RATE = 0.1  # Learning rate shrinks the contribution of each tree
     GB_MAX_DEPTH = 3  # Maximum depth of the individual regression estimators
 
+    # Data processing parameters
+    RAPID_EVENT_THRESHOLD_SECONDS = 5  # Threshold for rapid event deduplication (miss-clicks)
+    OUTLIER_REMOVAL_ENABLED = True  # Whether to remove outliers via IQR before ML training
+    NA_FILL_STRATEGY = 'zero'  # Strategy for filling NaN in activity features ('zero', 'mean', 'median')
+
+    # Feature name translations (English -> French)
+    FEATURE_NAMES_FR = {
+        # Activity metrics
+        'total_actions': 'actions_totales',
+        'unique_days_active': 'jours_actifs_uniques',
+        'actions_per_day': 'actions_par_jour',
+        'session_count': 'nombre_sessions',
+        # Event types
+        'view_count': 'nb_consultations',
+        'submission_count': 'nb_soumissions',
+        'forum_count': 'nb_forums',
+        'quiz_count': 'nb_quiz',
+        'download_count': 'nb_telechargements',
+        'other_count': 'nb_autres',
+        # Consistency
+        'streak_days': 'jours_consecutifs_max',
+        'avg_gap_days': 'ecart_moyen_jours',
+        'std_gap_days': 'ecart_type_jours',
+        'study_frequency': 'frequence_etude',
+        # Interaction depth
+        'component_diversity': 'diversite_composants',
+        'context_diversity': 'diversite_contextes',
+        'avg_interactions_per_component': 'interactions_moy_par_composant',
+        'component_switch_rate': 'taux_changement_composant',
+        # Temporal patterns
+        'peak_hour': 'heure_pointe',
+        'morning_activity': 'activite_matin',
+        'afternoon_activity': 'activite_apres_midi',
+        'evening_activity': 'activite_soir',
+        'night_activity': 'activite_nuit',
+        'weekend_activity_ratio': 'ratio_activite_weekend',
+        # Component prefix
+        'comp_': 'comp_',
+    }
+
     # Visualization and plotting parameters
     PLOT_DPI = 300  # Resolution for saved plots
     PLOT_FIGSIZE = (10, 6)  # Default figure size (width, height) in inches
@@ -483,6 +523,46 @@ class Config:
             raise ValueError(
                 f"SESSION_GAP_MINUTES doit être strictement positif, "
                 f"reçu: {self.SESSION_GAP_MINUTES}"
+            )
+
+        # Type checking for data processing parameters
+        if not isinstance(self.RAPID_EVENT_THRESHOLD_SECONDS, (int, float)):
+            raise TypeError(
+                f"RAPID_EVENT_THRESHOLD_SECONDS doit être un nombre (int ou float), "
+                f"reçu: {type(self.RAPID_EVENT_THRESHOLD_SECONDS).__name__}"
+            )
+
+        if not isinstance(self.OUTLIER_REMOVAL_ENABLED, bool):
+            raise TypeError(
+                f"OUTLIER_REMOVAL_ENABLED doit être un booléen (bool), "
+                f"reçu: {type(self.OUTLIER_REMOVAL_ENABLED).__name__}"
+            )
+
+        if not isinstance(self.NA_FILL_STRATEGY, str):
+            raise TypeError(
+                f"NA_FILL_STRATEGY doit être une chaîne (str), "
+                f"reçu: {type(self.NA_FILL_STRATEGY).__name__}"
+            )
+
+        if not isinstance(self.FEATURE_NAMES_FR, dict):
+            raise TypeError(
+                f"FEATURE_NAMES_FR doit être un dictionnaire (dict), "
+                f"reçu: {type(self.FEATURE_NAMES_FR).__name__}"
+            )
+
+        # Validate RAPID_EVENT_THRESHOLD_SECONDS
+        if self.RAPID_EVENT_THRESHOLD_SECONDS < 0:
+            raise ValueError(
+                f"RAPID_EVENT_THRESHOLD_SECONDS doit être positif ou nul, "
+                f"reçu: {self.RAPID_EVENT_THRESHOLD_SECONDS}"
+            )
+
+        # Validate NA_FILL_STRATEGY
+        valid_na_strategies = ['zero', 'mean', 'median']
+        if self.NA_FILL_STRATEGY not in valid_na_strategies:
+            raise ValueError(
+                f"NA_FILL_STRATEGY doit être l'un de {valid_na_strategies}, "
+                f"reçu: {self.NA_FILL_STRATEGY}"
             )
 
         # Type checking for Random Forest hyperparameters
