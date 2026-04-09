@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import tempfile
 import os
 from src.model_evaluator import ModelEvaluator
-from src.regression_model import RegressionModel
+from src.models.linear_regressor import LinearRegressor
 from src.config import Config
 
 
@@ -72,21 +72,21 @@ def large_sample_data():
 
 @pytest.fixture
 def trained_model(sample_data):
-    """Create a pre-trained RegressionModel for testing."""
+    """Create a pre-trained LinearRegressor for testing."""
     X = sample_data.drop(columns=['note'])
     y = sample_data['note']
-    model = RegressionModel()
+    model = LinearRegressor()
     model.fit(X, y)
     return model
 
 
 @pytest.fixture
 def second_trained_model(sample_data):
-    """Create a second pre-trained RegressionModel for comparison testing."""
+    """Create a second pre-trained LinearRegressor for comparison testing."""
     # Use only first two features for a different model
     X = sample_data[['feature_1', 'feature_2']]
     y = sample_data['note']
-    model = RegressionModel()
+    model = LinearRegressor()
     model.fit(X, y)
     return model
 
@@ -1041,12 +1041,12 @@ def test_evaluate_all():
     # Create and train first model (full features)
     X_full = sample_data.drop(columns=['note'])
     y = sample_data['note']
-    model1 = RegressionModel()
+    model1 = LinearRegressor()
     model1.fit(X_full, y)
 
     # Create and train second model (reduced features)
     X_reduced = sample_data[['feature_1', 'feature_2']]
-    model2 = RegressionModel()
+    model2 = LinearRegressor()
     model2.fit(X_reduced, y)
 
     # Create evaluator and add models
