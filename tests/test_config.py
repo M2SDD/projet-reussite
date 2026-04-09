@@ -28,7 +28,7 @@ def test_default_initialization():
     assert hasattr(config, 'LOGS_FILE_PATH')
     assert hasattr(config, 'NOTES_FILE_PATH')
     assert hasattr(config, 'OUTPUT_DIR')
-    assert hasattr(config, 'TRAIN_TEST_SPLIT_RATIO')
+    assert hasattr(config, 'TEST_SPLIT_RATIO')
     assert hasattr(config, 'CV_FOLDS')
     assert hasattr(config, 'RANDOM_STATE')
     assert hasattr(config, 'PLOT_DPI')
@@ -39,7 +39,7 @@ def test_default_initialization():
     # Verify default values
     assert config.LOGS_FILE_PATH == 'data/logs.csv'
     assert config.NOTES_FILE_PATH == 'data/notes.csv'
-    assert config.TRAIN_TEST_SPLIT_RATIO == 0.8
+    assert config.TEST_SPLIT_RATIO == 0.2
     assert config.CV_FOLDS == 5
     assert config.PLOT_DPI == 300
 
@@ -48,7 +48,7 @@ def test_load_json_config():
     """Test loading configuration from JSON file."""
     config_data = {
         'PLOT_DPI': 600,
-        'TRAIN_TEST_SPLIT_RATIO': 0.7,
+        'TEST_SPLIT_RATIO': 0.7,
         'CV_FOLDS': 10
     }
     f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
@@ -60,7 +60,7 @@ def test_load_json_config():
 
         # Verify that values from JSON file override defaults
         assert config.PLOT_DPI == 600
-        assert config.TRAIN_TEST_SPLIT_RATIO == 0.7
+        assert config.TEST_SPLIT_RATIO == 0.7
         assert config.CV_FOLDS == 10
 
         # Verify that non-overridden values remain at defaults
@@ -83,7 +83,7 @@ def temp_json_config():
     """Create a temporary JSON config file for testing."""
     config_data = {
         'PLOT_DPI': 600,
-        'TRAIN_TEST_SPLIT_RATIO': 0.7,
+        'TEST_SPLIT_RATIO': 0.7,
         'CV_FOLDS': 10
     }
     f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
@@ -99,7 +99,7 @@ def temp_json_config():
 def temp_invalid_json_config():
     """Create a temporary JSON config file with invalid values."""
     config_data = {
-        'TRAIN_TEST_SPLIT_RATIO': 1.5,  # Invalid: must be < 1
+        'TEST_SPLIT_RATIO': 1.5,  # Invalid: must be < 1
         'CV_FOLDS': 1,  # Invalid: must be >= 2
     }
     f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
@@ -142,10 +142,10 @@ class TestConfigDefaultInitialization:
 
     def test_default_ml_parameters(self, config):
         """Test that ML parameters are initialized correctly."""
-        assert hasattr(config, 'TRAIN_TEST_SPLIT_RATIO')
+        assert hasattr(config, 'TEST_SPLIT_RATIO')
         assert hasattr(config, 'CV_FOLDS')
         assert hasattr(config, 'RANDOM_STATE')
-        assert config.TRAIN_TEST_SPLIT_RATIO == 0.8
+        assert config.TEST_SPLIT_RATIO == 0.2
         assert config.CV_FOLDS == 5
         assert config.RANDOM_STATE == 42
 
@@ -225,7 +225,7 @@ class TestConfigParameterTypes:
 
     def test_numeric_parameters_types(self, config):
         """Test that numeric parameters are correct types."""
-        assert isinstance(config.TRAIN_TEST_SPLIT_RATIO, (int, float))
+        assert isinstance(config.TEST_SPLIT_RATIO, (int, float))
         assert isinstance(config.CV_FOLDS, int)
         assert isinstance(config.RANDOM_STATE, int)
         assert isinstance(config.NOTE_MIN, (int, float))
@@ -277,57 +277,57 @@ class TestConfigValidation:
         """Test that default values pass validation."""
         assert config is not None
 
-    def test_validation_train_test_split_ratio_too_high(self):
-        """Test that TRAIN_TEST_SPLIT_RATIO >= 1 raises ValueError."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 1.5}
+    def test_validation_test_split_ratio_too_high(self):
+        """Test that TEST_SPLIT_RATIO >= 1 raises ValueError."""
+        config_data = {'TEST_SPLIT_RATIO': 1.5}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
-            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+            with pytest.raises(ValueError, match='TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_train_test_split_ratio_too_low(self):
-        """Test that TRAIN_TEST_SPLIT_RATIO <= 0 raises ValueError."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.0}
+    def test_validation_test_split_ratio_too_low(self):
+        """Test that TEST_SPLIT_RATIO <= 0 raises ValueError."""
+        config_data = {'TEST_SPLIT_RATIO': 0.0}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
-            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+            with pytest.raises(ValueError, match='TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_train_test_split_ratio_negative(self):
-        """Test that negative TRAIN_TEST_SPLIT_RATIO raises ValueError."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': -0.5}
+    def test_validation_test_split_ratio_negative(self):
+        """Test that negative TEST_SPLIT_RATIO raises ValueError."""
+        config_data = {'TEST_SPLIT_RATIO': -0.5}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
-            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+            with pytest.raises(ValueError, match='TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_train_test_split_ratio_equals_one(self):
-        """Test that TRAIN_TEST_SPLIT_RATIO == 1 raises ValueError."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 1.0}
+    def test_validation_test_split_ratio_equals_one(self):
+        """Test that TEST_SPLIT_RATIO == 1 raises ValueError."""
+        config_data = {'TEST_SPLIT_RATIO': 1.0}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
-            with pytest.raises(ValueError, match='TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
+            with pytest.raises(ValueError, match='TEST_SPLIT_RATIO doit être strictement entre 0 et 1'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
@@ -529,15 +529,15 @@ class TestConfigValidation:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_type_error_train_test_split_ratio(self):
-        """Test that non-numeric TRAIN_TEST_SPLIT_RATIO raises TypeError."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 'invalid'}
+    def test_validation_type_error_test_split_ratio(self):
+        """Test that non-numeric TEST_SPLIT_RATIO raises TypeError."""
+        config_data = {'TEST_SPLIT_RATIO': 'invalid'}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
-            with pytest.raises(TypeError, match='TRAIN_TEST_SPLIT_RATIO doit être un nombre'):
+            with pytest.raises(TypeError, match='TEST_SPLIT_RATIO doit être un nombre'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
@@ -656,29 +656,29 @@ class TestConfigValidation:
                 os.unlink(f.name)
 
     def test_validation_edge_case_train_test_split_boundary_low(self):
-        """Test boundary value just above 0 for TRAIN_TEST_SPLIT_RATIO."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.001}
+        """Test boundary value just above 0 for TEST_SPLIT_RATIO."""
+        config_data = {'TEST_SPLIT_RATIO': 0.001}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
             config = Config(config_file=f.name)
-            assert config.TRAIN_TEST_SPLIT_RATIO == 0.001
+            assert config.TEST_SPLIT_RATIO == 0.001
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_edge_case_train_test_split_boundary_high(self):
-        """Test boundary value just below 1 for TRAIN_TEST_SPLIT_RATIO."""
-        config_data = {'TRAIN_TEST_SPLIT_RATIO': 0.999}
+    def test_validation_edge_case_test_split_boundary_high(self):
+        """Test boundary value just below 1 for TEST_SPLIT_RATIO."""
+        config_data = {'TEST_SPLIT_RATIO': 0.999}
         f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
         json.dump(config_data, f)
         f.close()
 
         try:
             config = Config(config_file=f.name)
-            assert config.TRAIN_TEST_SPLIT_RATIO == 0.999
+            assert config.TEST_SPLIT_RATIO == 0.999
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
@@ -734,7 +734,7 @@ class TestConfigValidation:
     def test_validation_multiple_errors_raises_first(self):
         """Test that first validation error is raised when multiple errors exist."""
         config_data = {
-            'TRAIN_TEST_SPLIT_RATIO': 'invalid',  # TypeError (checked first)
+            'TEST_SPLIT_RATIO': 'invalid',  # TypeError (checked first)
             'CV_FOLDS': 1,  # ValueError
             'PLOT_DPI': -100  # ValueError
         }
@@ -752,7 +752,7 @@ class TestConfigValidation:
     def test_validation_valid_custom_configuration(self):
         """Test that a valid custom configuration passes all validation."""
         config_data = {
-            'TRAIN_TEST_SPLIT_RATIO': 0.75,
+            'TEST_SPLIT_RATIO': 0.75,
             'CV_FOLDS': 10,
             'PLOT_DPI': 600,
             'RISK_THRESHOLD_HIGH': 8,
@@ -765,7 +765,7 @@ class TestConfigValidation:
 
         try:
             config = Config(config_file=f.name)
-            assert config.TRAIN_TEST_SPLIT_RATIO == 0.75
+            assert config.TEST_SPLIT_RATIO == 0.75
             assert config.CV_FOLDS == 10
             assert config.PLOT_DPI == 600
             assert config.RISK_THRESHOLD_HIGH == 8
@@ -783,14 +783,14 @@ class TestConfigFileLoading:
         """Test loading configuration from JSON file."""
         config = Config(config_file=temp_json_config)
         assert config.PLOT_DPI == 600
-        assert config.TRAIN_TEST_SPLIT_RATIO == 0.7
+        assert config.TEST_SPLIT_RATIO == 0.7
         assert config.CV_FOLDS == 10
 
     def test_missing_config_file_uses_defaults(self):
         """Test that missing config file falls back to defaults."""
         config = Config(config_file='nonexistent_file.json')
         assert config.PLOT_DPI == 300
-        assert config.TRAIN_TEST_SPLIT_RATIO == 0.8
+        assert config.TEST_SPLIT_RATIO == 0.2
         assert config.CV_FOLDS == 5
 
     def test_partial_config_merges_with_defaults(self):
@@ -836,7 +836,7 @@ class TestConfigExport:
                 exported_data = json.load(exported)
 
             assert 'PLOT_DPI' in exported_data
-            assert 'TRAIN_TEST_SPLIT_RATIO' in exported_data
+            assert 'TEST_SPLIT_RATIO' in exported_data
             assert exported_data['PLOT_DPI'] == 300
         finally:
             os.unlink(f.name)
@@ -863,7 +863,7 @@ class TestConfigExport:
 
             # Verify key parameters match
             assert config2.PLOT_DPI == config.PLOT_DPI
-            assert config2.TRAIN_TEST_SPLIT_RATIO == config.TRAIN_TEST_SPLIT_RATIO
+            assert config2.TEST_SPLIT_RATIO == config.TEST_SPLIT_RATIO
             assert config2.CV_FOLDS == config.CV_FOLDS
         finally:
             os.unlink(f.name)
@@ -882,7 +882,7 @@ class TestConfigExport:
             assert 'LOGS_FILE_PATH' in exported_data
             assert 'NOTES_FILE_PATH' in exported_data
             assert 'OUTPUT_DIR' in exported_data
-            assert 'TRAIN_TEST_SPLIT_RATIO' in exported_data
+            assert 'TEST_SPLIT_RATIO' in exported_data
             assert 'CV_FOLDS' in exported_data
             assert 'RANDOM_STATE' in exported_data
             assert 'NOTE_MIN' in exported_data
@@ -901,7 +901,7 @@ class TestConfigExport:
         """Test that export correctly saves modified configuration values."""
         # Modify some config values
         config.PLOT_DPI = 600
-        config.TRAIN_TEST_SPLIT_RATIO = 0.75
+        config.TEST_SPLIT_RATIO = 0.75
         config.CV_FOLDS = 10
         config.RANDOM_STATE = 123
 
@@ -915,7 +915,7 @@ class TestConfigExport:
 
             # Verify modified values are saved
             assert exported_data['PLOT_DPI'] == 600
-            assert exported_data['TRAIN_TEST_SPLIT_RATIO'] == 0.75
+            assert exported_data['TEST_SPLIT_RATIO'] == 0.75
             assert exported_data['CV_FOLDS'] == 10
             assert exported_data['RANDOM_STATE'] == 123
         finally:
@@ -939,7 +939,7 @@ class TestConfigExport:
             # Verify numeric types
             assert isinstance(exported_data['PLOT_DPI'], int)
             assert isinstance(exported_data['CV_FOLDS'], int)
-            assert isinstance(exported_data['TRAIN_TEST_SPLIT_RATIO'], float)
+            assert isinstance(exported_data['TEST_SPLIT_RATIO'], float)
 
             # Verify boolean types
             assert isinstance(exported_data['FEATURE_HOUR_OF_DAY'], bool)
@@ -1082,7 +1082,7 @@ class TestConfigIntegration:
         # Create and modify config
         config1 = Config()
         config1.PLOT_DPI = 500
-        config1.TRAIN_TEST_SPLIT_RATIO = 0.85
+        config1.TEST_SPLIT_RATIO = 0.85
         config1.NOTE_MIN = 2
         config1.NOTE_MAX = 18
 
@@ -1100,7 +1100,7 @@ class TestConfigIntegration:
 
             # Verify processor uses reloaded values
             assert processor.config.PLOT_DPI == 500
-            assert processor.config.TRAIN_TEST_SPLIT_RATIO == 0.85
+            assert processor.config.TEST_SPLIT_RATIO == 0.85
             assert processor.config.NOTE_MIN == 2
             assert processor.config.NOTE_MAX == 18
         finally:

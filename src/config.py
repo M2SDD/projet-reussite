@@ -50,7 +50,7 @@ class Config:
         NOTE_MAX (int): Note maximale valide (système français: 20)
         RISK_THRESHOLD_HIGH (int): Seuil de risque élevé (défaut: 10)
         RISK_THRESHOLD_MEDIUM (int): Seuil de risque moyen (défaut: 12)
-        TRAIN_TEST_SPLIT_RATIO (float): Ratio de séparation train/test (défaut: 0.8)
+        TEST_SPLIT_RATIO (float): Ratio de séparation train/test (défaut: 0.8)
         CV_FOLDS (int): Nombre de plis pour la validation croisée (défaut: 5)
         RANDOM_STATE (int): Graine aléatoire pour la reproductibilité (défaut: 42)
         RF_N_ESTIMATORS (int): Nombre d'arbres dans la forêt aléatoire (défaut: 100)
@@ -169,7 +169,7 @@ class Config:
     }
 
     # ML/Statistical analysis parameters
-    TRAIN_TEST_SPLIT_RATIO = 0.8  # 80% training, 20% testing
+    TEST_SPLIT_RATIO = 0.2  # 80% training, 20% testing
     CV_FOLDS = 5  # Number of folds for cross-validation
     RANDOM_STATE = 42  # Random seed for reproducibility
 
@@ -248,7 +248,7 @@ class Config:
         Valide les paramètres de configuration.
 
         Vérifie que tous les paramètres respectent les contraintes attendues :
-        - TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1
+        - TEST_SPLIT_RATIO doit être strictement entre 0 et 1
         - CV_FOLDS doit être au moins 2
         - NOTE_MIN doit être inférieur à NOTE_MAX
         - PLOT_DPI doit être strictement positif
@@ -261,10 +261,10 @@ class Config:
             TypeError: Si un paramètre n'a pas le type attendu
         """
         # Type checking for numeric parameters
-        if not isinstance(self.TRAIN_TEST_SPLIT_RATIO, (int, float)):
+        if not isinstance(self.TEST_SPLIT_RATIO, (int, float)):
             raise TypeError(
-                f"TRAIN_TEST_SPLIT_RATIO doit être un nombre (int ou float), "
-                f"reçu: {type(self.TRAIN_TEST_SPLIT_RATIO).__name__}"
+                f"TEST_SPLIT_RATIO doit être un nombre (int ou float), "
+                f"reçu: {type(self.TEST_SPLIT_RATIO).__name__}"
             )
 
         if not isinstance(self.CV_FOLDS, int):
@@ -432,11 +432,11 @@ class Config:
                 f"reçu: {type(self.EVENEMENT_CATEGORIES).__name__}"
             )
 
-        # Validate TRAIN_TEST_SPLIT_RATIO
-        if not (0 < self.TRAIN_TEST_SPLIT_RATIO < 1):
+        # Validate TEST_SPLIT_RATIO
+        if not (0 < self.TEST_SPLIT_RATIO < 1):
             raise ValueError(
-                f"TRAIN_TEST_SPLIT_RATIO doit être strictement entre 0 et 1, "
-                f"reçu: {self.TRAIN_TEST_SPLIT_RATIO}"
+                f"TEST_SPLIT_RATIO doit être strictement entre 0 et 1, "
+                f"reçu: {self.TEST_SPLIT_RATIO}"
             )
 
         # Validate CV_FOLDS
