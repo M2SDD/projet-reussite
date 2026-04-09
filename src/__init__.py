@@ -29,7 +29,21 @@ from .data_processor import DataProcessor
 from .models.ensemble_regressor import EnsembleRegressor
 from .models.linear_regressor import LinearRegressor
 
+# evaluation
+
+
+# visualisation
+from .visualization.model_visualizer import ModelVisualizer
 from .statistics_module import StatisticsModule
 from .visualizer import Visualizer
 
-__all__ = ['Config', 'DataLoader', 'DataProcessor', 'EnsembleRegressor', 'LinearRegressor', 'StatisticsModule', 'Visualizer']
+__all__ = [
+    'Config',
+    'DataLoader',
+    'DataProcessor',
+    'EnsembleRegressor',
+    'LinearRegressor',
+    'ModelVisualizer',
+    'StatisticsModule',
+    'Visualizer',
+]

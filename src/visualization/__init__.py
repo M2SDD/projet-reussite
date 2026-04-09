@@ -22,4 +22,6 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 from .model_visualizer import ModelVisualizer
 
-__all__ = ['ModelVisualizer',]
+__all__ = [
+    'ModelVisualizer',
+]
