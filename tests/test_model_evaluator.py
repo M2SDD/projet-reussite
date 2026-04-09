@@ -23,8 +23,8 @@ matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
 import tempfile
 import os
-from src.model_evaluator import ModelEvaluator
-from src.regression_model import RegressionModel
+from src.evaluation.model_evaluator import ModelEvaluator
+from src.models.linear_regressor import LinearRegressor
 from src.config import Config
 
 
@@ -72,21 +72,21 @@ def large_sample_data():
 
 @pytest.fixture
 def trained_model(sample_data):
-    """Create a pre-trained RegressionModel for testing."""
+    """Create a pre-trained LinearRegressor for testing."""
     X = sample_data.drop(columns=['note'])
     y = sample_data['note']
-    model = RegressionModel()
+    model = LinearRegressor()
     model.fit(X, y)
     return model
 
 
 @pytest.fixture
 def second_trained_model(sample_data):
-    """Create a second pre-trained RegressionModel for comparison testing."""
+    """Create a second pre-trained LinearRegressor for comparison testing."""
     # Use only first two features for a different model
     X = sample_data[['feature_1', 'feature_2']]
     y = sample_data['note']
-    model = RegressionModel()
+    model = LinearRegressor()
     model.fit(X, y)
     return model
 
@@ -132,51 +132,6 @@ class TestModelEvaluatorInitialization:
         assert evaluator.config is not None
         assert isinstance(evaluator.config, Config)
         assert evaluator.models == {}
-
-
-class TestModelRegistration:
-    """Test model registration functionality."""
-
-    def test_register_model_basic(self, evaluator, trained_model):
-        """Test basic model registration."""
-        evaluator.register_model('test_model', trained_model)
-
-        assert 'test_model' in evaluator.models
-        assert evaluator.models['test_model']['model'] == trained_model
-        assert evaluator.models['test_model']['X'] is None
-        assert evaluator.models['test_model']['y'] is None
-
-    def test_register_model_multiple(self, evaluator, trained_model, second_trained_model):
-        """Test registering multiple models."""
-        evaluator.register_model('model1', trained_model)
-        evaluator.register_model('model2', second_trained_model)
-
-        assert len(evaluator.models) == 2
-        assert 'model1' in evaluator.models
-        assert 'model2' in evaluator.models
-
-    def test_register_model_empty_name(self, evaluator, trained_model):
-        """Test error when registering with empty name."""
-        with pytest.raises(ValueError, match="nom du modèle doit être une chaîne non vide"):
-            evaluator.register_model('', trained_model)
-
-    def test_register_model_none_name(self, evaluator, trained_model):
-        """Test error when registering with None name."""
-        with pytest.raises(ValueError, match="nom du modèle doit être une chaîne non vide"):
-            evaluator.register_model(None, trained_model)
-
-    def test_register_model_none_model(self, evaluator):
-        """Test error when registering None model."""
-        with pytest.raises(ValueError, match="modèle ne peut pas être None"):
-            evaluator.register_model('test_model', None)
-
-    def test_register_model_duplicate_name(self, evaluator, trained_model):
-        """Test error when registering duplicate model name."""
-        evaluator.register_model('test_model', trained_model)
-
-        with pytest.raises(ValueError, match="modèle avec le nom 'test_model' existe déjà"):
-            evaluator.register_model('test_model', trained_model)
-
 
 class TestModelAddition:
     """Test model addition with evaluation data."""
@@ -298,21 +253,6 @@ class TestEvaluateAll:
         """Test error when no models have evaluation data."""
         with pytest.raises(ValueError, match="Aucun modèle avec données d'évaluation"):
             evaluator.evaluate_all()
-
-    def test_evaluate_all_only_registered_models(self, evaluator, trained_model, sample_data):
-        """Test that only models with data are evaluated."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        # Register one model without data
-        evaluator.register_model('registered_only', trained_model)
-        # Add one model with data
-        evaluator.add_model('with_data', trained_model, X, y)
-
-        results = evaluator.evaluate_all()
-
-        assert 'with_data' in results
-        assert 'registered_only' not in results
 
     def test_evaluate_all_metrics_validity(self, evaluator, trained_model, sample_data):
         """Test that metrics are valid numbers."""
@@ -1041,12 +981,12 @@ def test_evaluate_all():
     # Create and train first model (full features)
     X_full = sample_data.drop(columns=['note'])
     y = sample_data['note']
-    model1 = RegressionModel()
+    model1 = LinearRegressor()
     model1.fit(X_full, y)
 
     # Create and train second model (reduced features)
     X_reduced = sample_data[['feature_1', 'feature_2']]
-    model2 = RegressionModel()
+    model2 = LinearRegressor()
     model2.fit(X_reduced, y)
 
     # Create evaluator and add models

@@ -24,4 +24,8 @@ from .base_regressor import BaseRegressor
 from .ensemble_regressor import EnsembleRegressor
 from .linear_regressor import LinearRegressor
 
-__all__ = ['BaseRegressor', 'EnsembleRegressor', 'LinearRegressor']
+__all__ = [
+    'BaseRegressor',
+    'EnsembleRegressor',
+    'LinearRegressor'
+]

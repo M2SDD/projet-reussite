@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------------------------------------------------
 # Created By  : Matthieu PELINGRE
-# Created Date: 08/03/2025
+# Created Date: 09/04/2025
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-Package principal pour l'analyse et la visualisation des données d'exports Arche anonymisés
+Sous-package pour la gestion des modèles de machine learning.
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,31 +20,8 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
-from .config import Config
-
-from .data_loader import DataLoader
-from .data_processor import DataProcessor
-
-# models
-from .models.ensemble_regressor import EnsembleRegressor
-from .models.linear_regressor import LinearRegressor
-
-# evaluation
-from .evaluation.model_evaluator import ModelEvaluator
-
-# visualisation
-from .visualization.model_visualizer import ModelVisualizer
-from .statistics_module import StatisticsModule
-from .visualizer import Visualizer
+from .model_evaluator import ModelEvaluator
 
 __all__ = [
-    'Config',
-    'DataLoader',
-    'DataProcessor',
-    'EnsembleRegressor',
-    'LinearRegressor',
     'ModelEvaluator',
-    'ModelVisualizer',
-    'StatisticsModule',
-    'Visualizer',
 ]

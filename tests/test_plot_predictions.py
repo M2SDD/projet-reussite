@@ -7,10 +7,11 @@ Script de test pour la méthode plot_predictions() de ModelEvaluator
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
 
-from src.model_evaluator import ModelEvaluator
+from src.models.linear_regressor import LinearRegressor
+from src.models.ensemble_regressor import EnsembleRegressor
+
+from src.evaluation.model_evaluator import ModelEvaluator
 
 
 def test_plot_predictions():
@@ -39,12 +40,12 @@ def test_plot_predictions():
     print("\n1. Entraînement des modèles...")
 
     # Modèle 1 : Régression linéaire
-    model1 = LinearRegression()
+    model1 = LinearRegressor()
     model1.fit(X_df, y_series)
     print("   ✓ Modèle de régression linéaire entraîné")
 
     # Modèle 2 : Random Forest
-    model2 = RandomForestRegressor(n_estimators=50, random_state=42)
+    model2 = EnsembleRegressor()
     model2.fit(X_df, y_series)
     print("   ✓ Modèle Random Forest entraîné")
 
@@ -110,7 +111,7 @@ def test_plot_predictions():
     print("   ✓ (5) Labels et titres en français")
 
     # Sauvegarder le graphique pour inspection visuelle
-    output_path = './test_plot_predictions_output.png'
+    output_path = 'tests/test_plot_predictions_output.png'
     fig.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"\n5. Graphique sauvegardé : {output_path}")
 
@@ -137,7 +138,7 @@ def test_single_model():
     y = X[:, 0] * 2 + X[:, 1] * -1 + np.random.randn(50) * 0.3
 
     # Créer et entraîner un modèle
-    model = LinearRegression()
+    model = LinearRegressor()
     model.fit(X_df, y)
 
     # Créer l'évaluateur

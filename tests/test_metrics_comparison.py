@@ -7,11 +7,10 @@ Script de test pour la méthode plot_metrics_comparison()
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.tree import DecisionTreeRegressor
+from src.models.linear_regressor import LinearRegressor
+from src.models.ensemble_regressor import EnsembleRegressor
 
-from src.model_evaluator import ModelEvaluator
+from src.evaluation.model_evaluator import ModelEvaluator
 
 
 def test_plot_metrics_comparison():
@@ -59,26 +58,26 @@ def test_plot_metrics_comparison():
     print("\nEntraînement des modèles...")
 
     # Modèle 1: Régression linéaire
-    model1 = LinearRegression()
+    model1 = LinearRegressor()
     model1.fit(X_train, y_train)
     print("  ✓ Régression linéaire entraînée")
 
     # Modèle 2: Random Forest
-    model2 = RandomForestRegressor(n_estimators=50, random_state=42, max_depth=5)
+    model2 = EnsembleRegressor()
     model2.fit(X_train, y_train)
     print("  ✓ Random Forest entraînée")
 
     # Modèle 3: Decision Tree
-    model3 = DecisionTreeRegressor(random_state=42, max_depth=5)
+    model3 = EnsembleRegressor(model_type='gradient_boosting')
     model3.fit(X_train, y_train)
-    print("  ✓ Decision Tree entraînée")
+    print("  ✓ Gradient Boosting entraînée")
 
     # Créer l'évaluateur et enregistrer les modèles
     print("\nEnregistrement des modèles dans ModelEvaluator...")
     evaluator = ModelEvaluator()
     evaluator.add_model('Régression Linéaire', model1, X_test, y_test)
     evaluator.add_model('Random Forest', model2, X_test, y_test)
-    evaluator.add_model('Arbre de Décision', model3, X_test, y_test)
+    evaluator.add_model('Gradient Boosting', model3, X_test, y_test)
     print("  ✓ 3 modèles enregistrés")
 
     # Afficher les métriques pour référence
@@ -145,8 +144,8 @@ def test_plot_metrics_comparison():
     print(f"  ✓ Modèles sur l'axe x: {xticklabels}")
 
     # Sauvegarder le graphique
-    fig1.savefig('test_metrics_comparison_with_adjusted_r2.png', dpi=150, bbox_inches='tight')
-    print("\n  → Graphique sauvegardé: test_metrics_comparison_with_adjusted_r2.png")
+    fig1.savefig('tests/test_metrics_comparison_with_adjusted_r2.png', dpi=150, bbox_inches='tight')
+    print("\n  → Graphique sauvegardé: tests/test_metrics_comparison_with_adjusted_r2.png")
 
     # Test 2: Générer le graphique sans R² ajusté
     print("\n" + "-" * 80)
@@ -167,8 +166,8 @@ def test_plot_metrics_comparison():
     print(f"  ✓ Métriques présentes: {legend_texts2}")
 
     # Sauvegarder le graphique
-    fig2.savefig('test_metrics_comparison_without_adjusted_r2.png', dpi=150, bbox_inches='tight')
-    print("\n  → Graphique sauvegardé: test_metrics_comparison_without_adjusted_r2.png")
+    fig2.savefig('tests/test_metrics_comparison_without_adjusted_r2.png', dpi=150, bbox_inches='tight')
+    print("\n  → Graphique sauvegardé: tests/test_metrics_comparison_without_adjusted_r2.png")
 
     # Fermer les figures pour libérer la mémoire
     plt.close(fig1)
@@ -186,8 +185,8 @@ def test_plot_metrics_comparison():
     print("  ✓ Retourne une Figure matplotlib")
     print("  ✓ Option pour inclure/exclure le R² ajusté")
     print("\nFichiers générés:")
-    print("  - test_metrics_comparison_with_adjusted_r2.png")
-    print("  - test_metrics_comparison_without_adjusted_r2.png")
+    print("  - tests/test_metrics_comparison_with_adjusted_r2.png")
+    print("  - tests/test_metrics_comparison_without_adjusted_r2.png")
     print("=" * 80)
 
 

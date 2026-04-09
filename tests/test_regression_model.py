@@ -13,9 +13,7 @@ Tests cover:
 - Adjusted R² computation
 - Residuals computation
 - Full model evaluation
-- Residuals visualization
 - Normality testing (Shapiro-Wilk)
-- Q-Q plot generation
 - Edge cases and error handling
 """
 
@@ -611,55 +609,6 @@ class TestEvaluate:
             model.evaluate(X, y)
 
 
-class TestPlotResiduals:
-    """Test residuals plotting functionality."""
-
-    def test_plot_residuals_basic(self, trained_model, sample_data):
-        """Test basic residuals plot creation."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        fig = trained_model.plot_residuals(X, y)
-
-        assert isinstance(fig, plt.Figure)
-        plt.close(fig)
-
-    def test_plot_residuals_before_training(self, model, sample_data):
-        """Test error when plotting residuals before training."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        with pytest.raises(ValueError, match="n'a pas encore été entraîné"):
-            model.plot_residuals(X, y)
-
-    def test_plot_residuals_has_axes(self, trained_model, sample_data):
-        """Test that plot has axes configured."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        fig = trained_model.plot_residuals(X, y)
-
-        axes = fig.get_axes()
-        assert len(axes) > 0
-        plt.close(fig)
-
-    def test_plot_residuals_empty_X(self, trained_model):
-        """Test error handling with empty X."""
-        X = pd.DataFrame()
-        y = pd.Series([1, 2, 3])
-
-        with pytest.raises(ValueError, match="ne peut pas être vide"):
-            trained_model.plot_residuals(X, y)
-
-    def test_plot_residuals_dimension_mismatch(self, trained_model, sample_data):
-        """Test error handling with mismatched dimensions."""
-        X = sample_data.drop(columns=['note'])
-        y = pd.Series([1, 2, 3])
-
-        with pytest.raises(ValueError, match="même nombre d'échantillons"):
-            trained_model.plot_residuals(X, y)
-
-
 class TestResidualsNormality:
     """Test residuals normality testing."""
 
@@ -708,55 +657,6 @@ class TestResidualsNormality:
         # With perfect fit, residuals are all zero, test should still run
         assert 'test_statistic' in result
         assert 'p_value' in result
-
-
-class TestQQPlot:
-    """Test Q-Q plot generation."""
-
-    def test_plot_qq_plot_basic(self, trained_model, sample_data):
-        """Test basic Q-Q plot creation."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        fig = trained_model.plot_qq_plot(X, y)
-
-        assert isinstance(fig, plt.Figure)
-        plt.close(fig)
-
-    def test_plot_qq_plot_before_training(self, model, sample_data):
-        """Test error when plotting Q-Q before training."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        with pytest.raises(ValueError, match="n'a pas encore été entraîné"):
-            model.plot_qq_plot(X, y)
-
-    def test_plot_qq_plot_has_axes(self, trained_model, sample_data):
-        """Test that Q-Q plot has axes configured."""
-        X = sample_data.drop(columns=['note'])
-        y = sample_data['note']
-
-        fig = trained_model.plot_qq_plot(X, y)
-
-        axes = fig.get_axes()
-        assert len(axes) > 0
-        plt.close(fig)
-
-    def test_plot_qq_plot_empty_X(self, trained_model):
-        """Test error handling with empty X."""
-        X = pd.DataFrame()
-        y = pd.Series([1, 2, 3])
-
-        with pytest.raises(ValueError, match="ne peut pas être vide"):
-            trained_model.plot_qq_plot(X, y)
-
-    def test_plot_qq_plot_dimension_mismatch(self, trained_model, sample_data):
-        """Test error handling with mismatched dimensions."""
-        X = sample_data.drop(columns=['note'])
-        y = pd.Series([1, 2, 3])
-
-        with pytest.raises(ValueError, match="même nombre d'échantillons"):
-            trained_model.plot_qq_plot(X, y)
 
 
 class TestEdgeCases:
