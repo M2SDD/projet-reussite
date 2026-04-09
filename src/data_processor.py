@@ -20,6 +20,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+import numpy as np
 import pandas as pd
 import warnings
 from scipy import stats
@@ -58,6 +59,8 @@ class DataProcessor:
             'students_logs_only': 0,
             'students_notes_only': 0,
             'students_merged': 0,
+            'na_filled': 0,
+            'outliers_removed': 0,
         }
 
     def remove_duplicates(self, df):
@@ -1228,6 +1231,92 @@ class DataProcessor:
         )
 
         return X_final
+
+    def preprocess_features(self, df):
+        """
+        Prétraite les features du DataFrame en appliquant une stratégie de remplissage des NaN.
+
+        Stratégie :
+        - Les colonnes 'note' et 'pseudo' sont préservées telles quelles (NaN conservés).
+        - Toutes les autres colonnes numériques (features d'activité/ratio) sont remplies avec 0.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à prétraiter.
+
+        Returns:
+            pd.DataFrame: Le DataFrame avec les NaN traités selon la stratégie.
+        """
+        df = df.copy()
+        preserve_columns = {'note', 'pseudo'}
+        fill_columns = [
+            col for col in df.select_dtypes(include=[np.number]).columns
+            if col not in preserve_columns
+        ]
+
+        na_filled = df[fill_columns].isna().sum().sum()
+        df[fill_columns] = df[fill_columns].fillna(0)
+
+        self._cleaning_report['na_filled'] = int(na_filled)
+
+        if na_filled > 0:
+            warnings.warn(
+                f"{na_filled} valeurs NaN remplacées par 0 dans les features d'activité.",
+                UserWarning,
+            )
+
+        return df
+
+    def remove_outliers(self, df, columns=None):
+        """
+        Supprime les lignes contenant des outliers selon la méthode IQR.
+
+        Applique la détection d'outliers sur les colonnes d'engagement (colonnes numériques
+        hors 'note' et 'pseudo'). Une ligne est exclue si au moins une de ses valeurs
+        sur les colonnes ciblées est un outlier (< Q1 - 1.5*IQR ou > Q3 + 1.5*IQR).
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à filtrer.
+            columns (list, optional): Liste des colonnes sur lesquelles détecter les outliers.
+                Si None, utilise toutes les colonnes numériques sauf 'note' et 'pseudo'.
+
+        Returns:
+            pd.DataFrame: Le DataFrame sans les lignes contenant des outliers.
+        """
+        df = df.copy()
+        exclude_columns = {'note', 'pseudo'}
+
+        if columns is None:
+            columns = [
+                col for col in df.select_dtypes(include=[np.number]).columns
+                if col not in exclude_columns
+            ]
+
+        if not columns:
+            return df
+
+        initial_count = len(df)
+        mask = pd.Series(True, index=df.index)
+
+        for col in columns:
+            q1 = df[col].quantile(0.25)
+            q3 = df[col].quantile(0.75)
+            iqr = q3 - q1
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
+            mask = mask & (df[col] >= lower) & (df[col] <= upper)
+
+        df_clean = df[mask].reset_index(drop=True)
+        removed_count = initial_count - len(df_clean)
+
+        self._cleaning_report['outliers_removed'] = removed_count
+
+        if removed_count > 0:
+            warnings.warn(
+                f"{removed_count} lignes avec outliers supprimées (méthode IQR).",
+                UserWarning,
+            )
+
+        return df_clean
 
     def process_data(self, data):
         """
