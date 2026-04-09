@@ -22,6 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 from .config import Config
@@ -314,3 +315,99 @@ class ModelEvaluator:
         df = df.round(4)
 
         return df
+
+    def plot_predictions(self):
+        """
+        Crée des graphiques de prédictions vs valeurs réelles pour tous les modèles.
+
+        Cette méthode génère une grille de sous-graphiques (subplots) où chaque graphique
+        représente un modèle et affiche ses prédictions par rapport aux valeurs réelles.
+        Chaque graphique comprend :
+        - Un scatter plot des valeurs prédites vs valeurs réelles
+        - Une ligne diagonale de référence (y=x) montrant la prédiction parfaite
+        - Des labels et titres en français
+
+        La grille de sous-graphiques est automatiquement dimensionnée en fonction du nombre
+        de modèles enregistrés, avec un maximum de 3 colonnes par ligne.
+
+        Returns:
+            matplotlib.figure.Figure: La figure matplotlib contenant tous les graphiques.
+                La figure contient une grille de sous-graphiques avec un graphique par modèle.
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> fig = evaluator.plot_predictions()
+            >>> fig.savefig('predictions.png')
+        """
+        # Vérifier qu'il y a au moins un modèle avec des données d'évaluation
+        models_with_data = {
+            name: data for name, data in self.models.items()
+            if data['X'] is not None and data['y'] is not None
+        }
+
+        if not models_with_data:
+            raise ValueError(
+                "Aucun modèle avec données d'évaluation n'a été enregistré. "
+                "Veuillez utiliser la méthode add_model() pour enregistrer des modèles "
+                "avec leurs données d'évaluation."
+            )
+
+        # Calculer la disposition de la grille de sous-graphiques
+        n_models = len(models_with_data)
+        n_cols = min(3, n_models)  # Maximum 3 colonnes
+        n_rows = (n_models + n_cols - 1) // n_cols  # Division arrondie vers le haut
+
+        # Créer la figure et les axes
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+
+        # S'assurer que axes est toujours un tableau, même avec un seul subplot
+        if n_models == 1:
+            axes = np.array([axes])
+        axes = axes.flatten()
+
+        # Créer un graphique pour chaque modèle
+        for idx, (name, model_data) in enumerate(models_with_data.items()):
+            model = model_data['model']
+            X = model_data['X']
+            y = model_data['y']
+
+            # Faire les prédictions
+            y_pred = model.predict(X)
+
+            # Obtenir l'axe courant
+            ax = axes[idx]
+
+            # Tracer le scatter plot des prédictions vs valeurs réelles
+            ax.scatter(y, y_pred, alpha=0.6, edgecolors='k', linewidths=0.5)
+
+            # Calculer les limites pour la ligne diagonale
+            min_val = min(np.min(y), np.min(y_pred))
+            max_val = max(np.max(y), np.max(y_pred))
+
+            # Ajouter une ligne diagonale de référence y=x
+            ax.plot([min_val, max_val], [min_val, max_val],
+                   'r--', linewidth=2, label='Prédiction parfaite (y=x)')
+
+            # Calculer le R² pour le titre
+            r2 = r2_score(y, y_pred)
+
+            # Configurer les labels et le titre
+            ax.set_xlabel('Valeurs réelles', fontsize=12)
+            ax.set_ylabel('Valeurs prédites', fontsize=12)
+            ax.set_title(f'{name}\n(R² = {r2:.4f})', fontsize=14, fontweight='bold')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+
+        # Masquer les axes vides s'il y en a
+        for idx in range(n_models, len(axes)):
+            axes[idx].set_visible(False)
+
+        # Ajuster la mise en page
+        fig.tight_layout()
+
+        return fig
