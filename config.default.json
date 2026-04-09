@@ -88,8 +88,8 @@
   },
   "_EVENEMENT_CATEGORIES_description": "Mapping des types d'événements Moodle vers des catégories d'action",
 
-  "TRAIN_TEST_SPLIT_RATIO": 0.8,
-  "_TRAIN_TEST_SPLIT_RATIO_description": "Ratio de division train/test pour le ML (0.8 = 80% entraînement, 20% test)",
+  "TEST_SPLIT_RATIO": 0.2,
+  "_TEST_SPLIT_RATIO_description": "Ratio de division test/train pour le ML (0.8 = 80% entraînement, 20% test)",
 
   "CV_FOLDS": 5,
   "_CV_FOLDS_description": "Nombre de plis pour la validation croisée",
