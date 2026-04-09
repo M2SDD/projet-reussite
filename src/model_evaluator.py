@@ -21,6 +21,7 @@ __status__ = "Production"
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
 import numpy as np
+import pandas as pd
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 from .config import Config
@@ -267,3 +268,49 @@ class ModelEvaluator:
             }
 
         return results
+
+    def get_comparison_table(self):
+        """
+        Crée un tableau de comparaison avec les métriques de tous les modèles côte à côte.
+
+        Cette méthode génère un DataFrame pandas où chaque ligne représente un modèle
+        et chaque colonne représente une métrique de performance (R², RMSE, MAE, R² ajusté).
+        Cela permet une comparaison visuelle facile des performances de tous les modèles
+        enregistrés.
+
+        Les métriques incluses sont :
+        - R² (coefficient de détermination)
+        - RMSE (Root Mean Squared Error)
+        - MAE (Mean Absolute Error)
+        - R² ajusté (adjusted R²)
+
+        Returns:
+            pd.DataFrame: DataFrame avec les modèles en lignes (index) et les métriques
+                          en colonnes. Les valeurs sont formatées avec 4 décimales.
+                          Les métriques manquantes sont représentées par NaN.
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> table = evaluator.get_comparison_table()
+            >>> print(table)
+                              r2    rmse     mae  adjusted_r2
+            regression    0.9500  0.1000  0.0800       0.9400
+            random_forest 0.9200  0.1200  0.0950       0.9100
+        """
+        # Obtenir les métriques de tous les modèles
+        metrics_dict = self.evaluate_all()
+
+        # Convertir le dictionnaire en DataFrame
+        # Les clés du dictionnaire deviennent l'index (noms des modèles)
+        # Les sous-dictionnaires deviennent les colonnes
+        df = pd.DataFrame.from_dict(metrics_dict, orient='index')
+
+        # Arrondir toutes les valeurs à 4 décimales
+        df = df.round(4)
+
+        return df
