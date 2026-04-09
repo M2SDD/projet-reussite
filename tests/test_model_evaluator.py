@@ -533,3 +533,67 @@ class TestExportResults:
 
             assert os.path.exists(output_dir)
             assert os.path.exists(os.path.join(output_dir, 'comparison_table.csv'))
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Standalone Tests for Evaluation and Comparison Methods
+# ----------------------------------------------------------------------------------------------------------------------
+
+def test_evaluate_all():
+    """
+    Standalone test for evaluate_all method.
+
+    This test verifies that the evaluate_all method correctly evaluates
+    multiple models and returns their performance metrics.
+    """
+    # Create sample data
+    np.random.seed(42)
+    sample_data = pd.DataFrame({
+        'feature_1': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        'feature_2': [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
+        'feature_3': [5.0, 4.0, 3.0, 2.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        'note': [10.0, 12.0, 14.0, 16.0, 18.0, 15.0, 13.0, 11.0, 9.0, 7.0],
+    })
+
+    # Create and train first model (full features)
+    X_full = sample_data.drop(columns=['note'])
+    y = sample_data['note']
+    model1 = RegressionModel()
+    model1.fit(X_full, y)
+
+    # Create and train second model (reduced features)
+    X_reduced = sample_data[['feature_1', 'feature_2']]
+    model2 = RegressionModel()
+    model2.fit(X_reduced, y)
+
+    # Create evaluator and add models
+    evaluator = ModelEvaluator()
+    evaluator.add_model('model_full', model1, X_full, y)
+    evaluator.add_model('model_reduced', model2, X_reduced, y)
+
+    # Evaluate all models
+    results = evaluator.evaluate_all()
+
+    # Verify results structure
+    assert 'model_full' in results
+    assert 'model_reduced' in results
+    assert len(results) == 2
+
+    # Verify each model has all required metrics
+    for model_name in ['model_full', 'model_reduced']:
+        assert 'r2' in results[model_name]
+        assert 'rmse' in results[model_name]
+        assert 'mae' in results[model_name]
+        assert 'adjusted_r2' in results[model_name]
+
+        # Verify metrics are valid numbers
+        assert isinstance(results[model_name]['r2'], (int, float))
+        assert isinstance(results[model_name]['rmse'], (int, float))
+        assert isinstance(results[model_name]['mae'], (int, float))
+        assert isinstance(results[model_name]['adjusted_r2'], (int, float))
+
+        # Verify metric ranges
+        assert results[model_name]['r2'] <= 1.0
+        assert results[model_name]['rmse'] >= 0
+        assert results[model_name]['mae'] >= 0
+        assert results[model_name]['adjusted_r2'] <= 1.0
