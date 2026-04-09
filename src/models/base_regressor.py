@@ -157,9 +157,6 @@ class BaseRegressor(ABC):
             'adjusted_r2': self.compute_adjusted_r2(X, y)
         }
 
-
-    # TODO : voir si utile ici ou à déplacer dans visualizer ?
-    # pas forcément si on veut passer sur de la classification de risques ...
     def compute_residuals(self, X, y):
         """
         Calcule les résidus du modèle de régression.
@@ -201,73 +198,13 @@ class BaseRegressor(ABC):
 
         return residuals
 
-    def plot_residuals(self, X, y):
-        """
-        Crée un graphique des résidus du modèle de régression.
-
-        Cette méthode génère un graphique de résidus (residual plot) qui affiche
-        les résidus en fonction des valeurs prédites. Ce type de graphique permet
-        de vérifier visuellement les hypothèses de la régression linéaire :
-        - Homoscédasticité : la variance des résidus doit être constante
-        - Indépendance : les résidus ne doivent pas montrer de pattern
-        - Moyenne nulle : les résidus doivent être centrés autour de zéro
-        """
-        # Vérifier que le modèle a été entraîné
-        if self.model is None:
-            raise ValueError(
-                "Le modèle n'a pas encore été entraîné. "
-                "Veuillez appeler la méthode fit() avant de créer un graphique des résidus."
-            )
-
-        # Validation des entrées
-        if X is None or (hasattr(X, '__len__') and len(X) == 0):
-            raise ValueError("X ne peut pas être vide.")
-
-        if y is None or (hasattr(y, '__len__') and len(y) == 0):
-            raise ValueError("y ne peut pas être vide.")
-
-        # Vérification de la compatibilité des dimensions
-        n_samples_X = len(X)
-        n_samples_y = len(y)
-
-        if n_samples_X != n_samples_y:
-            raise ValueError(
-                f"X et y doivent avoir le même nombre d'échantillons. "
-                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
-            )
-
-        # Calculer les prédictions et les résidus
-        y_pred = self.predict(X)
-        residuals = self.compute_residuals(X, y)
-
-        # Créer la figure et les axes
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        # Tracer le scatter plot des résidus vs valeurs prédites
-        ax.scatter(y_pred, residuals, alpha=0.6, edgecolors='k', linewidths=0.5)
-
-        # Ajouter une ligne horizontale à y=0
-        ax.axhline(y=0, color='r', linestyle='--', linewidth=1.5, label='y=0')
-
-        # Configurer les labels et le titre
-        ax.set_xlabel('Valeurs prédites', fontsize=12)
-        ax.set_ylabel('Résidus', fontsize=12)
-        ax.set_title('Graphique des résidus', fontsize=14, fontweight='bold')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        # Ajuster la mise en page
-        fig.tight_layout()
-
-        return fig
-
     def check_residuals_normality(self, X, y):
         """
         Teste la normalité des résidus du modèle de régression à l'aide du test de Shapiro-Wilk.
 
         Le test de Shapiro-Wilk évalue si les résidus suivent une distribution normale,
         ce qui est une hypothèse importante de la régression linéaire. Un p-value > 0.05
-        suggère que les résidus suivent une distribution normale (hypothèse nulle non rejetée).
+        suggère que les résidus suivent une distribution normale.
         """
         # Vérifier que le modèle a été entraîné
         if self.model is None:
@@ -304,64 +241,3 @@ class BaseRegressor(ABC):
             'test_statistic': float(test_statistic),
             'p_value': float(p_value)
         }
-
-    def plot_qq_plot(self, X, y):
-        """
-        Crée un graphique Q-Q (quantile-quantile) des résidus du modèle de régression.
-
-        Cette méthode génère un graphique Q-Q qui compare la distribution des résidus
-        à une distribution normale théorique. Ce type de graphique permet de vérifier
-        visuellement l'hypothèse de normalité des résidus de la régression linéaire.
-        """
-        # Vérifier que le modèle a été entraîné
-        if self.model is None:
-            raise ValueError(
-                "Le modèle n'a pas encore été entraîné. "
-                "Veuillez appeler la méthode fit() avant de créer un graphique Q-Q."
-            )
-
-        # Validation des entrées
-        if X is None or (hasattr(X, '__len__') and len(X) == 0):
-            raise ValueError("X ne peut pas être vide.")
-
-        if y is None or (hasattr(y, '__len__') and len(y) == 0):
-            raise ValueError("y ne peut pas être vide.")
-
-        # Vérification de la compatibilité des dimensions
-        n_samples_X = len(X)
-        n_samples_y = len(y)
-
-        if n_samples_X != n_samples_y:
-            raise ValueError(
-                f"X et y doivent avoir le même nombre d'échantillons. "
-                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
-            )
-
-        # Calculer les résidus
-        residuals = self.compute_residuals(X, y)
-
-        # Créer la figure et les axes
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        # Générer les données du Q-Q plot avec scipy.stats.probplot
-        # probplot retourne (theoretical_quantiles, ordered_values), (slope, intercept, r)
-        (theoretical_quantiles, ordered_values), (slope, intercept, r) = stats.probplot(residuals, dist="norm")
-
-        # Tracer le scatter plot des quantiles
-        ax.scatter(theoretical_quantiles, ordered_values, alpha=0.6, edgecolors='k', linewidths=0.5)
-
-        # Ajouter la ligne de référence (distribution normale parfaite)
-        ax.plot(theoretical_quantiles, slope * theoretical_quantiles + intercept,
-                'r--', linewidth=1.5, label='Ligne de référence')
-
-        # Configurer les labels et le titre
-        ax.set_xlabel('Quantiles théoriques', fontsize=12)
-        ax.set_ylabel('Quantiles empiriques', fontsize=12)
-        ax.set_title('Graphique Q-Q des résidus', fontsize=14, fontweight='bold')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        # Ajuster la mise en page
-        fig.tight_layout()
-
-        return fig
