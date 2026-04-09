@@ -132,6 +132,54 @@ class DataProcessor:
         df = self.handle_missing_values(df)
         return df
 
+    def deduplicate_rapid_events(self, df, threshold_seconds=None):
+        """
+        Supprime les événements rapides consécutifs pour chaque étudiant.
+
+        Pour chaque étudiant (pseudo), trie par heure et supprime les événements
+        consécutifs espacés de moins de threshold_seconds, en ne conservant que le dernier.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs contenant au minimum les colonnes 'pseudo' et 'heure'.
+            threshold_seconds (int or float, optional): Seuil en secondes en dessous duquel
+                les événements consécutifs sont considérés comme rapides.
+                Si None, utilise Config.RAPID_EVENT_THRESHOLD_SECONDS.
+
+        Returns:
+            pd.DataFrame: Le DataFrame sans les événements rapides en doublon.
+        """
+        if threshold_seconds is None:
+            threshold_seconds = self.config.RAPID_EVENT_THRESHOLD_SECONDS
+
+        if threshold_seconds == 0:
+            return df
+
+        initial_count = len(df)
+        df = df.sort_values(['pseudo', 'heure']).reset_index(drop=True)
+
+        # Compute time difference between consecutive events per student
+        df['_time_diff'] = df.groupby('pseudo')['heure'].diff().dt.total_seconds()
+
+        # Mark rapid events (within threshold) - keep the last of each rapid burst
+        # An event is rapid if the NEXT event comes within threshold, so we check shift(-1)
+        # Actually: for consecutive events spaced < threshold, keep only the last one.
+        # Mark rows where the next row (same student) is within threshold => drop current row.
+        next_diff = df.groupby('pseudo')['_time_diff'].shift(-1)
+        is_rapid = next_diff.notna() & (next_diff < threshold_seconds)
+
+        df_clean = df[~is_rapid].drop(columns=['_time_diff']).reset_index(drop=True)
+
+        removed_count = initial_count - len(df_clean)
+        self._cleaning_report['events_deduplicated'] = removed_count
+
+        if removed_count > 0:
+            warnings.warn(
+                f"{removed_count} événements rapides supprimés (seuil: {threshold_seconds}s).",
+                UserWarning,
+            )
+
+        return df_clean
+
     def clean_notes(self, df):
         """
         Nettoie les données de notes : validation des plages, types et doublons.
