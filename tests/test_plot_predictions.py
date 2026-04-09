@@ -111,7 +111,7 @@ def test_plot_predictions():
     print("   ✓ (5) Labels et titres en français")
 
     # Sauvegarder le graphique pour inspection visuelle
-    output_path = './test_plot_predictions_output.png'
+    output_path = 'tests/test_plot_predictions_output.png'
     fig.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"\n5. Graphique sauvegardé : {output_path}")
 
