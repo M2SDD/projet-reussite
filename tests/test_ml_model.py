@@ -17,27 +17,25 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-import warnings
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for testing
-import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
-from src.ml_model import MLModel
-from src.regression_model import RegressionModel
+from src.models.ensemble_regressor import EnsembleRegressor
+from src.models.linear_regressor import LinearRegressor
 from src.config import Config
 
 
 @pytest.fixture
 def model():
     """Create a MLModel instance for testing."""
-    return MLModel()
+    return EnsembleRegressor()
 
 
 @pytest.fixture
 def model_with_config():
     """Create a MLModel instance with custom config."""
     config = Config()
-    return MLModel(config=config)
+    return EnsembleRegressor(config=config)
 
 
 @pytest.fixture
@@ -124,7 +122,7 @@ class TestModelInitialization:
 
     def test_init_none_config(self):
         """Test initialization with None config creates default config."""
-        model = MLModel(config=None)
+        model = EnsembleRegressor(config=None)
         assert model.config is not None
         assert isinstance(model.config, Config)
 
@@ -557,7 +555,7 @@ class TestEvaluate:
 
         metrics = trained_model.evaluate(X, y)
 
-        expected_keys = {'r2', 'rmse', 'mae'}
+        expected_keys = {'r2', 'rmse', 'mae', 'adjusted_r2'}
         assert set(metrics.keys()) == expected_keys
 
     def test_evaluate_metric_types(self, trained_model, sample_data):
@@ -633,7 +631,7 @@ class TestEdgeCases:
 
     def test_none_values_in_config(self):
         """Test that None config is handled properly."""
-        model = MLModel(config=None)
+        model = EnsembleRegressor(config=None)
 
         assert model.config is not None
         assert isinstance(model.config, Config)
@@ -654,8 +652,8 @@ class TestMLModelVsRegressionModelComparison:
         y = large_sample_data['note']
 
         # Create and train both models
-        ml_model = MLModel(model_type='random_forest')  # Explicit model type
-        regression_model = RegressionModel()
+        ml_model = EnsembleRegressor(model_type='random_forest')  # Explicit model type
+        regression_model = LinearRegressor()
 
         ml_model.fit(X, y)
         regression_model.fit(X, y)
@@ -710,8 +708,8 @@ class TestMLModelVsRegressionModelComparison:
         y = sample_data['note']
 
         # Create and train both models
-        ml_model = MLModel()
-        regression_model = RegressionModel()
+        ml_model = EnsembleRegressor()
+        regression_model = LinearRegressor()
 
         ml_model.fit(X, y)
         regression_model.fit(X, y)
@@ -736,8 +734,8 @@ class TestMLModelVsRegressionModelComparison:
         y = perfect_linear_data['note']
 
         # Create and train both models
-        ml_model = MLModel()
-        regression_model = RegressionModel()
+        ml_model = EnsembleRegressor()
+        regression_model = LinearRegressor()
 
         ml_model.fit(X, y)
         regression_model.fit(X, y)
@@ -762,8 +760,8 @@ class TestMLModelVsRegressionModelComparison:
     def test_mlmodel_vs_regression_train_test_split(self, large_sample_data):
         """Test that both models handle train-test splits consistently."""
         # Use the same random_state for both models
-        ml_model = MLModel()
-        regression_model = RegressionModel()
+        ml_model = EnsembleRegressor()
+        regression_model = LinearRegressor()
 
         # Perform train-test split with both models
         ml_X_train, ml_X_test, ml_y_train, ml_y_test = ml_model.train_test_split(

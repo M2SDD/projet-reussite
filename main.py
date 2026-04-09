@@ -24,8 +24,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from src import Config, DataLoader, DataProcessor, RegressionModel, StatisticsModule, Visualizer
-
+from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, Visualizer, EnsembleRegressor
 
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
@@ -340,7 +339,7 @@ if __name__ == '__main__':
     print()
 
     # Initialize regression model
-    regression_model = RegressionModel(config=config)
+    regression_model = LinearRegressor(config=config)
 
     # Train/Test split
     print("Splitting data into train and test sets...")
@@ -444,6 +443,126 @@ if __name__ == '__main__':
 
     print("Multiple linear regression model demonstration completed successfully")
     print()
+
+
+    # --------------------------------------------------------------------------
+    # Random Forest
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Random Forest Regression Model")
+    print("=" * 60)
+    print()
+
+    # Prepare final dataset for regression (merge selected features with grades)
+    print("Preparing regression dataset...")
+    regression_features = [col for col in best_features_df.columns]
+    regression_df = analysis_df[regression_features + ['note']].copy()
+
+    # Fill NaN values
+    regression_df = regression_df.fillna(0)
+
+    print(f"  - Features: {len(regression_features)}")
+    print(f"  - Samples: {len(regression_df)}")
+    print(f"  - Feature names: {', '.join(regression_features[:5])}{'...' if len(regression_features) > 5 else ''}")
+    print()
+
+    # Initialize regression model
+    regression_model = EnsembleRegressor(config=config)
+
+    # Train/Test split
+    print("Splitting data into train and test sets...")
+    X_train, X_test, y_train, y_test = regression_model.train_test_split(
+        regression_df,
+        target_column='note',
+        test_size=0.2,
+        random_state=42
+    )
+    print(f"  - Training set: {len(X_train)} samples ({len(X_train)/len(regression_df)*100:.1f}%)")
+    print(f"  - Test set: {len(X_test)} samples ({len(X_test)/len(regression_df)*100:.1f}%)")
+    print()
+
+    # Train the model
+    print("Training multiple linear regression model...")
+    regression_model.fit(X_train, y_train)
+    print("  ✓ Model trained successfully")
+    print()
+
+    # Display model coefficients
+    print("Feature Importance:")
+    feature_importance = regression_model.get_feature_importance(feature_names=X_train.columns)
+
+    for idx, row in feature_importance.head(10).iterrows():
+        print(f"    {row['feature']:<40} : {row['importance']:>10.4f}")
+
+    if len(feature_importance) > 10:
+        print(f"    ... and {len(feature_importance) - 10} more features")
+    print()
+
+    # Evaluate model on training set
+    print("Model Performance on Training Set:")
+    train_metrics = regression_model.evaluate(X_train, y_train)
+    print(f"  - R² Score:           {train_metrics['r2']:.4f}")
+    print(f"  - Adjusted R² Score:  {train_metrics['adjusted_r2']:.4f}")
+    print(f"  - RMSE:               {train_metrics['rmse']:.4f}")
+    print(f"  - MAE:                {train_metrics['mae']:.4f}")
+    print()
+
+    # Evaluate model on test set
+    print("Model Performance on Test Set:")
+    test_metrics = regression_model.evaluate(X_test, y_test)
+    print(f"  - R² Score:           {test_metrics['r2']:.4f}")
+    print(f"  - Adjusted R² Score:  {test_metrics['adjusted_r2']:.4f}")
+    print(f"  - RMSE:               {test_metrics['rmse']:.4f}")
+    print(f"  - MAE:                {test_metrics['mae']:.4f}")
+    print()
+
+    # Make sample predictions
+    print("Sample Predictions:")
+    y_pred_sample = regression_model.predict(X_test.head(5))
+    prediction_comparison = pd.DataFrame({
+        'Actual': y_test.head(5).values,
+        'Predicted': y_pred_sample,
+        'Residual': y_test.head(5).values - y_pred_sample
+    })
+    print(prediction_comparison.to_string(index=False))
+    print()
+
+    # Residual analysis
+    print("Residual Analysis:")
+
+    # Compute residuals
+    residuals = regression_model.compute_residuals(X_test, y_test)
+    print(f"  - Mean residual:      {np.mean(residuals):.4f}")
+    print(f"  - Std residual:       {np.std(residuals):.4f}")
+    print(f"  - Min residual:       {np.min(residuals):.4f}")
+    print(f"  - Max residual:       {np.max(residuals):.4f}")
+    print()
+
+    # Check normality of residuals
+    print("Residual Normality Test (Shapiro-Wilk):")
+    normality_test = regression_model.check_residuals_normality(X_test, y_test)
+    print(f"  - Test Statistic: {normality_test['test_statistic']:.4f}")
+    print(f"  - P-Value:        {normality_test['p_value']:.4f}")
+
+    if normality_test['p_value'] > 0.05:
+        print("  - Interpretation: Residuals appear normally distributed (p > 0.05)")
+    else:
+        print("  - Interpretation: Residuals may not be normally distributed (p ≤ 0.05)")
+    print()
+
+    # Model comparison summary
+    print("Model Summary:")
+    print(f"  - Features used:      {len(regression_features)}")
+    print(f"  - Training samples:   {len(X_train)}")
+    print(f"  - Test samples:       {len(X_test)}")
+    print(f"  - Test R²:            {test_metrics['r2']:.4f}")
+    print(f"  - Test RMSE:          {test_metrics['rmse']:.4f}")
+    print(f"  - Overfitting check:  {'Minimal' if abs(train_metrics['r2'] - test_metrics['r2']) < 0.1 else 'Possible'}")
+    print()
+
+    print("Multiple linear regression model demonstration completed successfully")
+    print()
+
 
     # --------------------------------------------------------------------------
     # Final Summary

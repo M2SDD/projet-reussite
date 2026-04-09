@@ -22,26 +22,25 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-import warnings
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-from src.regression_model import RegressionModel
+from src.models.linear_regressor import LinearRegressor
 from src.config import Config
 
 
 @pytest.fixture
 def model():
     """Create a RegressionModel instance for testing."""
-    return RegressionModel()
+    return LinearRegressor()
 
 
 @pytest.fixture
 def model_with_config():
     """Create a RegressionModel instance with custom config."""
     config = Config()
-    return RegressionModel(config=config)
+    return LinearRegressor(config=config)
 
 
 @pytest.fixture
@@ -128,7 +127,7 @@ class TestModelInitialization:
 
     def test_init_none_config(self):
         """Test initialization with None config creates default config."""
-        model = RegressionModel(config=None)
+        model = LinearRegressor(config=None)
         assert model.config is not None
         assert isinstance(model.config, Config)
 
