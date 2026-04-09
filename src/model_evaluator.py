@@ -614,3 +614,89 @@ class ModelEvaluator:
         fig.tight_layout()
 
         return fig
+
+    def get_recommendation(self):
+        """
+        Fournit une recommandation sur le meilleur modèle basée sur les métriques de performance.
+
+        Cette méthode analyse tous les modèles enregistrés et sélectionne le meilleur en fonction
+        de leurs métriques de performance. Le critère principal est le R² ajusté (adjusted_r2),
+        car il prend en compte la complexité du modèle. En cas d'égalité, le RMSE est utilisé
+        comme critère secondaire (plus faible est meilleur).
+
+        Le R² ajusté est préféré au R² simple car il pénalise l'ajout de features inutiles,
+        ce qui évite le sur-ajustement et favorise les modèles plus simples.
+
+        Returns:
+            dict: Dictionnaire contenant la recommandation avec les clés suivantes :
+                - 'best_model' (str): Nom du modèle recommandé
+                - 'reason' (str): Explication de la recommandation
+                - 'metrics' (dict): Métriques du modèle recommandé (r2, rmse, mae, adjusted_r2)
+                - 'all_metrics' (dict): Métriques de tous les modèles pour comparaison
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('regression', model1, X_test, y_test)
+            >>> evaluator.add_model('random_forest', model2, X_test, y_test)
+            >>> recommendation = evaluator.get_recommendation()
+            >>> print(recommendation['best_model'])
+            'random_forest'
+            >>> print(recommendation['reason'])
+            "Meilleur R² ajusté (0.9500)"
+        """
+        # Obtenir les métriques de tous les modèles
+        all_metrics = self.evaluate_all()
+
+        # Vérifier qu'il y a au moins un modèle
+        if not all_metrics:
+            raise ValueError(
+                "Aucun modèle avec données d'évaluation n'a été enregistré. "
+                "Veuillez utiliser la méthode add_model() pour enregistrer des modèles "
+                "avec leurs données d'évaluation."
+            )
+
+        # Trouver le modèle avec le meilleur R² ajusté
+        # En cas d'égalité, utiliser le RMSE le plus faible comme critère secondaire
+        best_model = None
+        best_metrics = None
+        best_adjusted_r2 = -np.inf
+        best_rmse = np.inf
+
+        for model_name, metrics in all_metrics.items():
+            adjusted_r2 = metrics['adjusted_r2']
+            rmse = metrics['rmse']
+
+            # Comparer d'abord par R² ajusté (plus élevé est meilleur)
+            if adjusted_r2 > best_adjusted_r2:
+                best_model = model_name
+                best_metrics = metrics
+                best_adjusted_r2 = adjusted_r2
+                best_rmse = rmse
+            # En cas d'égalité de R² ajusté, utiliser le RMSE (plus faible est meilleur)
+            elif adjusted_r2 == best_adjusted_r2 and rmse < best_rmse:
+                best_model = model_name
+                best_metrics = metrics
+                best_adjusted_r2 = adjusted_r2
+                best_rmse = rmse
+
+        # Construire la raison de la recommandation
+        reason = f"Meilleur R² ajusté ({best_adjusted_r2:.4f})"
+
+        # Si plusieurs modèles ont le même R² ajusté, mentionner le RMSE
+        models_with_same_r2 = [
+            name for name, m in all_metrics.items()
+            if m['adjusted_r2'] == best_adjusted_r2
+        ]
+        if len(models_with_same_r2) > 1:
+            reason += f" avec le RMSE le plus faible ({best_rmse:.4f})"
+
+        # Retourner la recommandation
+        return {
+            'best_model': best_model,
+            'reason': reason,
+            'metrics': best_metrics,
+            'all_metrics': all_metrics
+        }
