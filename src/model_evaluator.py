@@ -20,6 +20,9 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+import numpy as np
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
 from .config import Config
 
 
@@ -105,5 +108,162 @@ class ModelEvaluator:
                 f"Veuillez choisir un nom différent ou supprimer le modèle existant."
             )
 
-        # Enregistrer le modèle
-        self.models[name] = model
+        # Enregistrer le modèle (sans données d'évaluation)
+        self.models[name] = {
+            'model': model,
+            'X': None,
+            'y': None
+        }
+
+    def add_model(self, name, model, X, y):
+        """
+        Enregistre un modèle avec ses données d'évaluation.
+
+        Cette méthode permet d'ajouter un modèle au framework de comparaison avec
+        les données nécessaires pour l'évaluation automatique. Le modèle peut être
+        de n'importe quel type tant qu'il possède une méthode predict().
+
+        Args:
+            name (str): Nom unique identifiant le modèle (ex: 'linear_regression', 'random_forest').
+            model: Instance du modèle entraîné. Doit avoir une méthode predict(X).
+            X (pd.DataFrame ou np.ndarray): Features pour l'évaluation du modèle.
+                Peut être un DataFrame pandas ou un tableau numpy de shape (n_samples, n_features).
+            y (pd.Series ou np.ndarray): Valeurs cibles réelles pour l'évaluation.
+                Peut être une Series pandas ou un tableau numpy de shape (n_samples,).
+
+        Raises:
+            ValueError: Si le nom est vide ou si le modèle est None.
+            ValueError: Si X ou y sont vides ou None.
+            ValueError: Si X et y n'ont pas le même nombre d'échantillons.
+            ValueError: Si un modèle avec ce nom existe déjà.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> from src.regression_model import RegressionModel
+            >>> model = RegressionModel()
+            >>> model.fit(X_train, y_train)
+            >>> evaluator.add_model('linear_regression', model, X_test, y_test)
+        """
+        # Validation du nom
+        if not name or not isinstance(name, str):
+            raise ValueError("Le nom du modèle doit être une chaîne non vide.")
+
+        # Validation du modèle
+        if model is None:
+            raise ValueError("Le modèle ne peut pas être None.")
+
+        # Validation des données X
+        if X is None or (hasattr(X, '__len__') and len(X) == 0):
+            raise ValueError("X ne peut pas être vide.")
+
+        # Validation des données y
+        if y is None or (hasattr(y, '__len__') and len(y) == 0):
+            raise ValueError("y ne peut pas être vide.")
+
+        # Vérification de la compatibilité des dimensions
+        n_samples_X = len(X)
+        n_samples_y = len(y)
+
+        if n_samples_X != n_samples_y:
+            raise ValueError(
+                f"X et y doivent avoir le même nombre d'échantillons. "
+                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
+            )
+
+        # Vérifier si le nom existe déjà
+        if name in self.models:
+            raise ValueError(
+                f"Un modèle avec le nom '{name}' existe déjà. "
+                f"Veuillez choisir un nom différent ou supprimer le modèle existant."
+            )
+
+        # Enregistrer le modèle avec ses données d'évaluation
+        self.models[name] = {
+            'model': model,
+            'X': X,
+            'y': y
+        }
+
+    def evaluate_all(self):
+        """
+        Évalue tous les modèles enregistrés et retourne leurs métriques de performance.
+
+        Cette méthode calcule les métriques de performance (R², RMSE, MAE, R² ajusté)
+        pour tous les modèles qui ont été enregistrés avec des données d'évaluation
+        via la méthode add_model(). Les modèles enregistrés sans données (via register_model())
+        sont ignorés.
+
+        Les métriques calculées sont :
+        - R² (coefficient de détermination) : Mesure la proportion de variance expliquée (0-1)
+        - RMSE (Root Mean Squared Error) : Erreur quadratique moyenne (plus faible = meilleur)
+        - MAE (Mean Absolute Error) : Erreur absolue moyenne (plus faible = meilleur)
+        - R² ajusté : R² ajusté pour le nombre de features (pénalise la complexité)
+
+        Returns:
+            dict: Dictionnaire avec les noms de modèles comme clés et un dictionnaire
+                  de métriques comme valeurs. Chaque dictionnaire de métriques contient :
+                  - 'r2' (float): Coefficient de détermination R²
+                  - 'rmse' (float): Erreur quadratique moyenne
+                  - 'mae' (float): Erreur absolue moyenne
+                  - 'adjusted_r2' (float): R² ajusté
+
+        Raises:
+            ValueError: Si aucun modèle n'a été enregistré avec des données d'évaluation.
+
+        Examples:
+            >>> evaluator = ModelEvaluator()
+            >>> evaluator.add_model('model1', model1, X_test, y_test)
+            >>> evaluator.add_model('model2', model2, X_test, y_test)
+            >>> results = evaluator.evaluate_all()
+            >>> print(results['model1']['r2'])  # Affiche le R² du modèle 1
+        """
+        # Vérifier qu'il y a au moins un modèle avec des données d'évaluation
+        models_with_data = {
+            name: data for name, data in self.models.items()
+            if data['X'] is not None and data['y'] is not None
+        }
+
+        if not models_with_data:
+            raise ValueError(
+                "Aucun modèle avec données d'évaluation n'a été enregistré. "
+                "Veuillez utiliser la méthode add_model() pour enregistrer des modèles "
+                "avec leurs données d'évaluation."
+            )
+
+        # Calculer les métriques pour chaque modèle
+        results = {}
+
+        for name, model_data in models_with_data.items():
+            model = model_data['model']
+            X = model_data['X']
+            y = model_data['y']
+
+            # Faire les prédictions
+            y_pred = model.predict(X)
+
+            # Calculer les métriques de base
+            r2 = r2_score(y, y_pred)
+            rmse = np.sqrt(mean_squared_error(y, y_pred))
+            mae = mean_absolute_error(y, y_pred)
+
+            # Calculer le R² ajusté
+            # Formule : R²_adj = 1 - ((1 - R²) * (n - 1) / (n - p - 1))
+            # où n = nombre d'échantillons, p = nombre de features
+            n = len(y)
+            p = X.shape[1] if hasattr(X, 'shape') and len(X.shape) > 1 else 1
+
+            if n > p + 1:
+                adjusted_r2 = 1 - ((1 - r2) * (n - 1) / (n - p - 1))
+            else:
+                # Si n <= p + 1, le R² ajusté n'est pas défini, on utilise le R² normal
+                adjusted_r2 = r2
+
+            # Stocker les résultats
+            results[name] = {
+                'r2': r2,
+                'rmse': rmse,
+                'mae': mae,
+                'adjusted_r2': adjusted_r2
+            }
+
+        return results
