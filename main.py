@@ -491,8 +491,6 @@ if __name__ == '__main__':
     print("Feature Importance:")
     feature_importance = regression_model.get_feature_importance(feature_names=X_train.columns)
 
-    print(feature_importance.head(10).to_string(index=False))
-
     for idx, row in feature_importance.head(10).iterrows():
         print(f"    {row['feature']:<40} : {row['importance']:>10.4f}")
 
