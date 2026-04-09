@@ -45,8 +45,8 @@ class BaseRegressor(ABC):
         self.config = config if config is not None else Config()
         self.model = None
 
-    # TODO : voir si on utilise la config ici ou plus tard.
-    # si non -> transformer en staticmethod et déplacer dans data_processor ?
+    # TODO : à refactoriser dans le DataProcessor
+    # également voir si on utilise la config ici ou plus tard.
     def train_test_split(self, df: pd.DataFrame, target_column: str,
                          random_state: Optional[int] = None, test_size: Optional[float] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """Divise les données en ensembles d'entraînement et de test."""
@@ -161,29 +161,7 @@ class BaseRegressor(ABC):
         """
         Calcule les résidus du modèle de régression.
         """
-        # Vérifier que le modèle a été entraîné
-        if self.model is None:
-            raise ValueError(
-                "Le modèle n'a pas encore été entraîné. "
-                "Veuillez appeler la méthode fit() avant de calculer les résidus."
-            )
-
-        # Validation des entrées
-        if X is None or (hasattr(X, '__len__') and len(X) == 0):
-            raise ValueError("X ne peut pas être vide.")
-
-        if y is None or (hasattr(y, '__len__') and len(y) == 0):
-            raise ValueError("y ne peut pas être vide.")
-
-        # Vérification de la compatibilité des dimensions
-        n_samples_X = len(X)
-        n_samples_y = len(y)
-
-        if n_samples_X != n_samples_y:
-            raise ValueError(
-                f"X et y doivent avoir le même nombre d'échantillons. "
-                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
-            )
+        self._validate_data(X, y)
 
         # Faire les prédictions
         y_pred = self.predict(X)
@@ -206,29 +184,7 @@ class BaseRegressor(ABC):
         ce qui est une hypothèse importante de la régression linéaire. Un p-value > 0.05
         suggère que les résidus suivent une distribution normale.
         """
-        # Vérifier que le modèle a été entraîné
-        if self.model is None:
-            raise ValueError(
-                "Le modèle n'a pas encore été entraîné. "
-                "Veuillez appeler la méthode fit() avant de tester la normalité des résidus."
-            )
-
-        # Validation des entrées
-        if X is None or (hasattr(X, '__len__') and len(X) == 0):
-            raise ValueError("X ne peut pas être vide.")
-
-        if y is None or (hasattr(y, '__len__') and len(y) == 0):
-            raise ValueError("y ne peut pas être vide.")
-
-        # Vérification de la compatibilité des dimensions
-        n_samples_X = len(X)
-        n_samples_y = len(y)
-
-        if n_samples_X != n_samples_y:
-            raise ValueError(
-                f"X et y doivent avoir le même nombre d'échantillons. "
-                f"X a {n_samples_X} échantillons, y en a {n_samples_y}."
-            )
+        self._validate_data(X, y)
 
         # Calculer les résidus
         residuals = self.compute_residuals(X, y)

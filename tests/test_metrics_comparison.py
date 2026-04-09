@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from src.models.linear_regressor import LinearRegressor
 from src.models.ensemble_regressor import EnsembleRegressor
 
-from src.model_evaluator import ModelEvaluator
+from src.evaluation.model_evaluator import ModelEvaluator
 
 
 def test_plot_metrics_comparison():

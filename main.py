@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, Visualizer, EnsembleRegressor
+from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, Visualizer, EnsembleRegressor, ModelVisualizer, ModelEvaluator
 
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
@@ -467,11 +467,11 @@ if __name__ == '__main__':
     print()
 
     # Initialize regression model
-    regression_model = EnsembleRegressor(config=config)
+    ensemble_model = EnsembleRegressor(config=config)
 
-    # Train/Test split
+    # Train/Test splitc
     print("Splitting data into train and test sets...")
-    X_train, X_test, y_train, y_test = regression_model.train_test_split(
+    X_train, X_test, y_train, y_test = ensemble_model.train_test_split(
         regression_df,
         target_column='note',
         test_size=0.2,
@@ -483,13 +483,13 @@ if __name__ == '__main__':
 
     # Train the model
     print("Training multiple linear regression model...")
-    regression_model.fit(X_train, y_train)
+    ensemble_model.fit(X_train, y_train)
     print("  ✓ Model trained successfully")
     print()
 
     # Display model coefficients
     print("Feature Importance:")
-    feature_importance = regression_model.get_feature_importance(feature_names=X_train.columns)
+    feature_importance = ensemble_model.get_feature_importance(feature_names=X_train.columns)
 
     for idx, row in feature_importance.head(10).iterrows():
         print(f"    {row['feature']:<40} : {row['importance']:>10.4f}")
@@ -500,7 +500,7 @@ if __name__ == '__main__':
 
     # Evaluate model on training set
     print("Model Performance on Training Set:")
-    train_metrics = regression_model.evaluate(X_train, y_train)
+    train_metrics = ensemble_model.evaluate(X_train, y_train)
     print(f"  - R² Score:           {train_metrics['r2']:.4f}")
     print(f"  - Adjusted R² Score:  {train_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {train_metrics['rmse']:.4f}")
@@ -509,7 +509,7 @@ if __name__ == '__main__':
 
     # Evaluate model on test set
     print("Model Performance on Test Set:")
-    test_metrics = regression_model.evaluate(X_test, y_test)
+    test_metrics = ensemble_model.evaluate(X_test, y_test)
     print(f"  - R² Score:           {test_metrics['r2']:.4f}")
     print(f"  - Adjusted R² Score:  {test_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {test_metrics['rmse']:.4f}")
@@ -518,7 +518,7 @@ if __name__ == '__main__':
 
     # Make sample predictions
     print("Sample Predictions:")
-    y_pred_sample = regression_model.predict(X_test.head(5))
+    y_pred_sample = ensemble_model.predict(X_test.head(5))
     prediction_comparison = pd.DataFrame({
         'Actual': y_test.head(5).values,
         'Predicted': y_pred_sample,
@@ -531,7 +531,7 @@ if __name__ == '__main__':
     print("Residual Analysis:")
 
     # Compute residuals
-    residuals = regression_model.compute_residuals(X_test, y_test)
+    residuals = ensemble_model.compute_residuals(X_test, y_test)
     print(f"  - Mean residual:      {np.mean(residuals):.4f}")
     print(f"  - Std residual:       {np.std(residuals):.4f}")
     print(f"  - Min residual:       {np.min(residuals):.4f}")
@@ -540,7 +540,7 @@ if __name__ == '__main__':
 
     # Check normality of residuals
     print("Residual Normality Test (Shapiro-Wilk):")
-    normality_test = regression_model.check_residuals_normality(X_test, y_test)
+    normality_test = ensemble_model.check_residuals_normality(X_test, y_test)
     print(f"  - Test Statistic: {normality_test['test_statistic']:.4f}")
     print(f"  - P-Value:        {normality_test['p_value']:.4f}")
 
@@ -565,6 +565,23 @@ if __name__ == '__main__':
 
 
     # --------------------------------------------------------------------------
+    # Models comparison
+    # --------------------------------------------------------------------------
+    print("=" * 60)
+    print("Models comparison")
+    print("=" * 60)
+    evaluator = ModelEvaluator()
+    evaluator.add_model('LinearRegression', regression_model, X_test, y_test)
+    evaluator.add_model('RandomForestRegressor', ensemble_model, X_test, y_test)
+    evaluator.export_results(output_dir='tests')
+    print("Comparison results exported to 'tests' directory.")
+    print("Recommandations based on models' performances:")
+    reco = evaluator.get_recommendation()
+    print("\t- Best model :", reco['best_model'])
+    print("\t- Reason :", reco['reason'])
+    print()
+
+    # --------------------------------------------------------------------------
     # Final Summary
     # --------------------------------------------------------------------------
     print("=" * 60)
@@ -579,7 +596,7 @@ if __name__ == '__main__':
     print("✓ Descriptive Statistics:    Completed")
     print("✓ Regression Model:          Completed")
     print()
-    print(f"Final model ready for deployment with {len(regression_features)} features")
-    print(f"Model performance: R²={test_metrics['r2']:.4f}, RMSE={test_metrics['rmse']:.4f}")
+    print(f"Final {reco['best_model']} model ready for deployment with {len(regression_features)} features")
+    print(f"Model performance: R²={reco['metrics']['r2']:.4f}, RMSE={reco['metrics']['rmse']:.4f}")
     print()
     print("=" * 60)

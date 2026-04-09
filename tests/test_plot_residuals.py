@@ -7,10 +7,10 @@ Script de test pour la méthode plot_residuals() de ModelEvaluator
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from src import LinearRegressor
+from src import EnsembleRegressor
 
-from src.model_evaluator import ModelEvaluator
+from src.evaluation.model_evaluator import ModelEvaluator
 
 
 def test_plot_residuals():
@@ -39,12 +39,12 @@ def test_plot_residuals():
     print("\n1. Entraînement des modèles...")
 
     # Modèle 1 : Régression linéaire
-    model1 = LinearRegression()
+    model1 = LinearRegressor()
     model1.fit(X_df, y_series)
     print("   ✓ Modèle de régression linéaire entraîné")
 
     # Modèle 2 : Random Forest
-    model2 = RandomForestRegressor(n_estimators=50, random_state=42)
+    model2 = EnsembleRegressor()
     model2.fit(X_df, y_series)
     print("   ✓ Modèle Random Forest entraîné")
 
@@ -141,7 +141,7 @@ def test_single_model():
     y = X[:, 0] * 2 + X[:, 1] * -1 + np.random.randn(50) * 0.3
 
     # Créer et entraîner un modèle
-    model = LinearRegression()
+    model = LinearRegressor()
     model.fit(X_df, y)
 
     # Créer l'évaluateur
