@@ -713,7 +713,8 @@ class DataProcessor:
         )
 
         # 2. Deduplicate rapid events
-        logs_clean = self.deduplicate_rapid_events(logs_clean)
+        if self.config.RAPID_EVENT_THRESHOLD_ENABLED:
+            logs_clean = self.deduplicate_rapid_events(logs_clean)
 
         # 3. Clean notes
         notes_clean = self.clean_notes(notes_df)

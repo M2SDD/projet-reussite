@@ -107,7 +107,8 @@ class Config:
     DUPLICATE_SUBSET = None  # None means all columns
 
     # Paramètres de data processing
-    RAPID_EVENT_THRESHOLD_SECONDS = 1  # Seuil pour le dédoublement des événements rapides (miss-clicks ?)
+    RAPID_EVENT_THRESHOLD_ENABLED = False
+    RAPID_EVENT_THRESHOLD_SECONDS = 2  # Seuil pour le dédoublement des événements rapides (miss-clicks ?)
 
     # --- FEATURE ENGINEERING ---
 
@@ -709,7 +710,7 @@ class Config:
 
 if __name__ == "__main__":
     config = Config()
-    # sauvegarde du fichier de confid dans le dossier parent
+    # sauvegarde du fichier de config dans le dossier parent
     os.chdir(os.pardir)
     print(os.getcwd())
 

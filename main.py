@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, Visualizer, EnsembleRegressor, ModelVisualizer, ModelEvaluator
+from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, EnsembleRegressor, ModelEvaluator
 
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
@@ -58,7 +58,6 @@ if __name__ == '__main__':
     data_loader = DataLoader()
     data_processor = DataProcessor()
     statistics_module = StatisticsModule()
-    visualizer = Visualizer()
 
     # Vérification de l'architecture OOP
     print("✓ Tous les modules sont chargés avec succès")
@@ -66,7 +65,6 @@ if __name__ == '__main__':
     print(f"✓ DataLoader: {type(data_loader).__name__}")
     print(f"✓ DataProcessor: {type(data_processor).__name__}")
     print(f"✓ StatisticsModule: {type(statistics_module).__name__}")
-    print(f"✓ Visualizer: {type(visualizer).__name__}")
     print()
 
 
