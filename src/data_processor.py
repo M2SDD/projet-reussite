@@ -20,6 +20,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+import numpy as np
 import pandas as pd
 import warnings
 from scipy import stats
@@ -55,9 +56,12 @@ class DataProcessor:
             'notes_duplicates_removed': 0,
             'notes_invalid_pseudo': 0,
             'notes_clipped': 0,
+            'events_deduplicated': 0,
             'students_logs_only': 0,
             'students_notes_only': 0,
             'students_merged': 0,
+            'na_filled': 0,
+            'outliers_removed': 0,
         }
 
     def remove_duplicates(self, df):
@@ -131,6 +135,54 @@ class DataProcessor:
         df = self.remove_duplicates(df)
         df = self.handle_missing_values(df)
         return df
+
+    def deduplicate_rapid_events(self, df, threshold_seconds=None):
+        """
+        Supprime les événements rapides consécutifs pour chaque étudiant.
+
+        Pour chaque étudiant (pseudo), trie par heure et supprime les événements
+        consécutifs espacés de moins de threshold_seconds, en ne conservant que le dernier.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame de logs contenant au minimum les colonnes 'pseudo' et 'heure'.
+            threshold_seconds (int or float, optional): Seuil en secondes en dessous duquel
+                les événements consécutifs sont considérés comme rapides.
+                Si None, utilise Config.RAPID_EVENT_THRESHOLD_SECONDS.
+
+        Returns:
+            pd.DataFrame: Le DataFrame sans les événements rapides en doublon.
+        """
+        if threshold_seconds is None:
+            threshold_seconds = self.config.RAPID_EVENT_THRESHOLD_SECONDS
+
+        if threshold_seconds == 0:
+            return df
+
+        initial_count = len(df)
+        df = df.sort_values(['pseudo', 'heure']).reset_index(drop=True)
+
+        # Compute time difference between consecutive events per student
+        df['_time_diff'] = df.groupby('pseudo')['heure'].diff().dt.total_seconds()
+
+        # Mark rapid events (within threshold) - keep the last of each rapid burst
+        # An event is rapid if the NEXT event comes within threshold, so we check shift(-1)
+        # Actually: for consecutive events spaced < threshold, keep only the last one.
+        # Mark rows where the next row (same student) is within threshold => drop current row.
+        next_diff = df.groupby('pseudo')['_time_diff'].shift(-1)
+        is_rapid = next_diff.notna() & (next_diff < threshold_seconds)
+
+        df_clean = df[~is_rapid].drop(columns=['_time_diff']).reset_index(drop=True)
+
+        removed_count = initial_count - len(df_clean)
+        self._cleaning_report['events_deduplicated'] = removed_count
+
+        if removed_count > 0:
+            warnings.warn(
+                f"{removed_count} événements rapides supprimés (seuil: {threshold_seconds}s).",
+                UserWarning,
+            )
+
+        return df_clean
 
     def clean_notes(self, df):
         """
@@ -634,10 +686,14 @@ class DataProcessor:
 
         Appelle séquentiellement :
         1. clean_logs pour nettoyer les logs
-        2. clean_notes pour nettoyer les notes
-        3. extract_temporal_features pour enrichir les logs
-        4. build_engagement_features pour calculer les features d'engagement
-        5. Merge avec les notes
+        2. deduplicate_rapid_events pour supprimer les événements rapides
+        3. clean_notes pour nettoyer les notes
+        4. extract_temporal_features pour enrichir les logs
+        5. build_engagement_features pour calculer les features d'engagement
+        6. Merge avec les notes
+        7. preprocess_features pour remplir les NaN
+        8. remove_outliers pour supprimer les outliers (méthode IQR)
+        9. rename_features_to_french pour renommer les colonnes en français
 
         Args:
             logs_df (pd.DataFrame): DataFrame de logs brut.
@@ -650,26 +706,39 @@ class DataProcessor:
         self._cleaning_report['logs_initial_rows'] = len(logs_df)
         self._cleaning_report['notes_initial_rows'] = len(notes_df)
 
-        # Clean
+        # 1. Clean logs
         logs_clean = self.clean_logs(logs_df)
-        notes_clean = self.clean_notes(notes_df)
-
         self._cleaning_report['logs_duplicates_removed'] = (
             len(logs_df) - len(logs_clean)
         )
 
-        # Extract temporal features
+        # 2. Deduplicate rapid events
+        logs_clean = self.deduplicate_rapid_events(logs_clean)
+
+        # 3. Clean notes
+        notes_clean = self.clean_notes(notes_df)
+
+        # 4. Extract temporal features
         logs_enriched = self.extract_temporal_features(logs_clean)
 
-        # Build ALL engagement features (includes activity + component features)
+        # 5. Build ALL engagement features (includes activity + component features)
         engagement_features = self.build_engagement_features(logs_enriched)
 
-        # Merge directly with notes (don't call merge_logs_notes)
+        # 6. Merge with notes
         result = engagement_features.merge(
             notes_clean[['pseudo', 'note']],
             on='pseudo',
             how='outer'
         )
+
+        # 7. Preprocess features (fill NaN)
+        result = self.preprocess_features(result)
+
+        # 8. Remove outliers
+        result = self.remove_outliers(result)
+
+        # 9. Rename features to French
+        result = self.rename_features_to_french(result)
 
         # Update tracking for students
         logs_students = set(engagement_features['pseudo'].unique())
@@ -1068,8 +1137,10 @@ class DataProcessor:
             raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
 
         # Separate target from features
-        y = df[target]
-        X = df.drop(columns=[target])
+        # Drop rows where target is NaN before fitting
+        df_clean = df.dropna(subset=[target])
+        y = df_clean[target]
+        X = df_clean.drop(columns=[target])
 
         # Select only numeric columns for feature selection
         numeric_cols = X.select_dtypes(include=['number']).columns.tolist()
@@ -1180,6 +1251,120 @@ class DataProcessor:
         )
 
         return X_final
+
+    def preprocess_features(self, df):
+        """
+        Prétraite les features du DataFrame en appliquant une stratégie de remplissage des NaN.
+
+        Stratégie :
+        - Les colonnes 'note' et 'pseudo' sont préservées telles quelles (NaN conservés).
+        - Toutes les autres colonnes numériques (features d'activité/ratio) sont remplies avec 0.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à prétraiter.
+
+        Returns:
+            pd.DataFrame: Le DataFrame avec les NaN traités selon la stratégie.
+        """
+        df = df.copy()
+        preserve_columns = {'note', 'pseudo'}
+        fill_columns = [
+            col for col in df.select_dtypes(include=[np.number]).columns
+            if col not in preserve_columns
+        ]
+
+        na_filled = df[fill_columns].isna().sum().sum()
+        df[fill_columns] = df[fill_columns].fillna(0)
+
+        self._cleaning_report['na_filled'] = int(na_filled)
+
+        if na_filled > 0:
+            warnings.warn(
+                f"{na_filled} valeurs NaN remplacées par 0 dans les features d'activité.",
+                UserWarning,
+            )
+
+        return df
+
+    def remove_outliers(self, df, columns=None):
+        """
+        Supprime les lignes contenant des outliers selon la méthode IQR.
+
+        Applique la détection d'outliers sur les colonnes d'engagement (colonnes numériques
+        hors 'note' et 'pseudo'). Une ligne est exclue si au moins une de ses valeurs
+        sur les colonnes ciblées est un outlier (< Q1 - 1.5*IQR ou > Q3 + 1.5*IQR).
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à filtrer.
+            columns (list, optional): Liste des colonnes sur lesquelles détecter les outliers.
+                Si None, utilise toutes les colonnes numériques sauf 'note' et 'pseudo'.
+
+        Returns:
+            pd.DataFrame: Le DataFrame sans les lignes contenant des outliers.
+        """
+        df = df.copy()
+        exclude_columns = {'note', 'pseudo'}
+
+        if columns is None:
+            columns = [
+                col for col in df.select_dtypes(include=[np.number]).columns
+                if col not in exclude_columns
+            ]
+
+        if not columns:
+            return df
+
+        initial_count = len(df)
+        mask = pd.Series(True, index=df.index)
+
+        for col in columns:
+            q1 = df[col].quantile(0.25)
+            q3 = df[col].quantile(0.75)
+            iqr = q3 - q1
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
+            mask = mask & (df[col] >= lower) & (df[col] <= upper)
+
+        df_clean = df[mask].reset_index(drop=True)
+        removed_count = initial_count - len(df_clean)
+
+        self._cleaning_report['outliers_removed'] = removed_count
+
+        if removed_count > 0:
+            warnings.warn(
+                f"{removed_count} lignes avec outliers supprimées (méthode IQR).",
+                UserWarning,
+            )
+
+        return df_clean
+
+    def rename_features_to_french(self, df):
+        """
+        Renomme les colonnes de features anglaises en français.
+
+        Utilise Config.FEATURE_NAMES_FR pour le mapping. Gère le préfixe 'comp_'
+        (les noms de composants sont déjà en français dans les données).
+        Les colonnes 'pseudo' et 'note' ne sont pas renommées.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame avec des colonnes en anglais.
+
+        Returns:
+            pd.DataFrame: Le DataFrame avec les colonnes renommées en français.
+        """
+        rename_map = {}
+        feature_names_fr = self.config.FEATURE_NAMES_FR
+
+        for col in df.columns:
+            if col in ('pseudo', 'note'):
+                continue
+            if col.startswith('comp_'):
+                # Les noms de composants sont déjà en français, on garde le préfixe
+                continue
+            if col in feature_names_fr:
+                rename_map[col] = feature_names_fr[col]
+
+        return df.rename(columns=rename_map)
 
     def process_data(self, data):
         """

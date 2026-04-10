@@ -1134,3 +1134,300 @@ class TestGenerateReport:
         # Look for patterns like ": 0.00%"
         percentage_pattern = r': \d+\.\d{2}%'
         assert re.search(percentage_pattern, result) is not None
+
+
+class TestCalculateBasicStats:
+    """Test calculate_basic_stats functionality."""
+
+    def test_basic_stats_series(self, stats_module, sample_numeric_df):
+        """Test calculate_basic_stats with a Series."""
+        result = stats_module.calculate_basic_stats(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert 'mean' in result
+        assert 'std' in result
+        assert 'min' in result
+        assert 'max' in result
+        assert '25%' in result
+        assert '50%' in result
+        assert '75%' in result
+        assert 'count' in result
+
+    def test_basic_stats_dataframe(self, stats_module, sample_numeric_df):
+        """Test calculate_basic_stats with a DataFrame."""
+        result = stats_module.calculate_basic_stats(sample_numeric_df)
+        assert isinstance(result, dict)
+        assert 'score' in result
+        assert 'age' in result
+        assert 'hours_studied' in result
+        # Each column should have describe() stats
+        assert 'mean' in result['score']
+
+    def test_basic_stats_mixed_df(self, stats_module, sample_mixed_df):
+        """Test that non-numeric columns are excluded from DataFrame input."""
+        result = stats_module.calculate_basic_stats(sample_mixed_df)
+        assert isinstance(result, dict)
+        assert 'pseudo' in result
+        assert 'note' in result
+        assert 'nom' not in result
+
+    def test_basic_stats_values_correct(self, stats_module, sample_numeric_df):
+        """Test that basic stats values are correct."""
+        result = stats_module.calculate_basic_stats(sample_numeric_df['score'])
+        scores = [85, 90, 78, 92, 88, 76, 95, 82, 89, 91]
+        assert result['mean'] == pytest.approx(np.mean(scores))
+        assert result['min'] == pytest.approx(min(scores))
+        assert result['max'] == pytest.approx(max(scores))
+        assert result['count'] == pytest.approx(len(scores))
+
+
+class TestCalculateCentralTendency:
+    """Test calculate_central_tendency functionality."""
+
+    def test_central_tendency_structure(self, stats_module, sample_numeric_df):
+        """Test that calculate_central_tendency returns correct structure."""
+        result = stats_module.calculate_central_tendency(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert 'mean' in result
+        assert 'median' in result
+        assert 'mode' in result
+
+    def test_central_tendency_values(self, stats_module, sample_numeric_df):
+        """Test that central tendency values are correct."""
+        scores = sample_numeric_df['score']
+        result = stats_module.calculate_central_tendency(scores)
+        assert result['mean'] == pytest.approx(float(scores.mean()))
+        assert result['median'] == pytest.approx(float(scores.median()))
+
+    def test_central_tendency_mode(self, stats_module):
+        """Test that mode is computed correctly."""
+        data = pd.Series([1, 2, 2, 3, 4])
+        result = stats_module.calculate_central_tendency(data)
+        assert result['mode'] == 2.0
+
+    def test_central_tendency_no_mode(self, stats_module):
+        """Test mode when all values are unique."""
+        data = pd.Series([1, 2, 3, 4, 5])
+        result = stats_module.calculate_central_tendency(data)
+        # mode() returns the smallest value when all are unique
+        assert result['mode'] is not None
+
+    def test_central_tendency_returns_floats(self, stats_module, sample_numeric_df):
+        """Test that all returned values are floats."""
+        result = stats_module.calculate_central_tendency(sample_numeric_df['score'])
+        assert isinstance(result['mean'], float)
+        assert isinstance(result['median'], float)
+
+
+class TestCalculateDispersion:
+    """Test calculate_dispersion functionality."""
+
+    def test_dispersion_structure(self, stats_module, sample_numeric_df):
+        """Test that calculate_dispersion returns correct structure."""
+        result = stats_module.calculate_dispersion(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert 'variance' in result
+        assert 'std' in result
+        assert 'range' in result
+        assert 'iqr' in result
+
+    def test_dispersion_values(self, stats_module, sample_numeric_df):
+        """Test that dispersion values are correct."""
+        scores = sample_numeric_df['score']
+        result = stats_module.calculate_dispersion(scores)
+        assert result['variance'] == pytest.approx(float(scores.var()))
+        assert result['std'] == pytest.approx(float(scores.std()))
+        assert result['range'] == pytest.approx(float(scores.max() - scores.min()))
+
+    def test_dispersion_iqr(self, stats_module):
+        """Test that IQR is computed correctly."""
+        data = pd.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        result = stats_module.calculate_dispersion(data)
+        q1 = data.quantile(0.25)
+        q3 = data.quantile(0.75)
+        assert result['iqr'] == pytest.approx(q3 - q1)
+
+    def test_dispersion_constant_data(self, stats_module):
+        """Test dispersion with constant data (all same values)."""
+        data = pd.Series([5, 5, 5, 5, 5])
+        result = stats_module.calculate_dispersion(data)
+        assert result['variance'] == 0.0
+        assert result['std'] == 0.0
+        assert result['range'] == 0.0
+        assert result['iqr'] == 0.0
+
+    def test_dispersion_returns_floats(self, stats_module, sample_numeric_df):
+        """Test that all returned values are floats."""
+        result = stats_module.calculate_dispersion(sample_numeric_df['score'])
+        for key in ['variance', 'std', 'range', 'iqr']:
+            assert isinstance(result[key], float)
+
+
+class TestCalculateDistribution:
+    """Test calculate_distribution functionality."""
+
+    def test_distribution_structure(self, stats_module, sample_numeric_df):
+        """Test that calculate_distribution returns correct structure."""
+        result = stats_module.calculate_distribution(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert 'skewness' in result
+        assert 'kurtosis' in result
+
+    def test_distribution_values(self, stats_module, sample_numeric_df):
+        """Test that distribution values are correct."""
+        scores = sample_numeric_df['score']
+        result = stats_module.calculate_distribution(scores)
+        assert result['skewness'] == pytest.approx(float(scores.skew()))
+        assert result['kurtosis'] == pytest.approx(float(scores.kurtosis()))
+
+    def test_distribution_normal(self, stats_module, normal_df):
+        """Test distribution for normal data."""
+        result = stats_module.calculate_distribution(normal_df['normal_dist'])
+        assert abs(result['skewness']) < 0.5
+        assert abs(result['kurtosis']) < 1.0
+
+    def test_distribution_returns_floats(self, stats_module, sample_numeric_df):
+        """Test that all returned values are floats."""
+        result = stats_module.calculate_distribution(sample_numeric_df['score'])
+        assert isinstance(result['skewness'], float)
+        assert isinstance(result['kurtosis'], float)
+
+
+class TestCalculateQuantiles:
+    """Test calculate_quantiles functionality."""
+
+    def test_quantiles_default(self, stats_module, sample_numeric_df):
+        """Test calculate_quantiles with default quantiles."""
+        result = stats_module.calculate_quantiles(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert '0.25' in result
+        assert '0.5' in result
+        assert '0.75' in result
+
+    def test_quantiles_custom(self, stats_module, sample_numeric_df):
+        """Test calculate_quantiles with custom quantiles."""
+        result = stats_module.calculate_quantiles(sample_numeric_df['score'], quantiles=[0.1, 0.9])
+        assert '0.1' in result
+        assert '0.9' in result
+        assert '0.25' not in result
+
+    def test_quantiles_values_correct(self, stats_module, sample_numeric_df):
+        """Test that quantile values are correct."""
+        scores = sample_numeric_df['score']
+        result = stats_module.calculate_quantiles(scores)
+        assert result['0.25'] == pytest.approx(float(scores.quantile(0.25)))
+        assert result['0.5'] == pytest.approx(float(scores.quantile(0.5)))
+        assert result['0.75'] == pytest.approx(float(scores.quantile(0.75)))
+
+    def test_quantiles_returns_floats(self, stats_module, sample_numeric_df):
+        """Test that all returned values are floats."""
+        result = stats_module.calculate_quantiles(sample_numeric_df['score'])
+        for value in result.values():
+            assert isinstance(value, float)
+
+    def test_quantiles_single(self, stats_module, sample_numeric_df):
+        """Test calculate_quantiles with a single quantile."""
+        result = stats_module.calculate_quantiles(sample_numeric_df['score'], quantiles=[0.5])
+        assert len(result) == 1
+        assert '0.5' in result
+
+
+class TestGenerateSummary:
+    """Test generate_summary functionality."""
+
+    def test_summary_structure(self, stats_module, sample_numeric_df):
+        """Test that generate_summary returns correct structure."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert isinstance(result, dict)
+        assert 'basic_stats' in result
+        assert 'central_tendency' in result
+        assert 'dispersion' in result
+        assert 'distribution' in result
+        assert 'quantiles' in result
+
+    def test_summary_with_series(self, stats_module, sample_numeric_df):
+        """Test generate_summary with a Series input."""
+        result = stats_module.generate_summary(sample_numeric_df['score'])
+        assert isinstance(result, dict)
+        assert 'basic_stats' in result
+        assert 'central_tendency' in result
+
+    def test_summary_basic_stats_populated(self, stats_module, sample_numeric_df):
+        """Test that basic_stats section is populated."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert result['basic_stats'] is not None
+        assert isinstance(result['basic_stats'], dict)
+
+    def test_summary_central_tendency_populated(self, stats_module, sample_numeric_df):
+        """Test that central_tendency section is populated."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert 'mean' in result['central_tendency']
+        assert 'median' in result['central_tendency']
+
+    def test_summary_dispersion_populated(self, stats_module, sample_numeric_df):
+        """Test that dispersion section is populated."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert 'variance' in result['dispersion']
+        assert 'std' in result['dispersion']
+
+    def test_summary_distribution_populated(self, stats_module, sample_numeric_df):
+        """Test that distribution section is populated."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert 'skewness' in result['distribution']
+        assert 'kurtosis' in result['distribution']
+
+    def test_summary_quantiles_populated(self, stats_module, sample_numeric_df):
+        """Test that quantiles section is populated."""
+        result = stats_module.generate_summary(sample_numeric_df)
+        assert '0.25' in result['quantiles']
+        assert '0.5' in result['quantiles']
+        assert '0.75' in result['quantiles']
+
+
+class TestGetOutlierMask:
+    """Test get_outlier_mask functionality."""
+
+    def test_outlier_mask_returns_series(self, stats_module, df_with_outliers):
+        """Test that get_outlier_mask returns a boolean Series."""
+        result = stats_module.get_outlier_mask(df_with_outliers)
+        assert isinstance(result, pd.Series)
+        assert result.dtype == bool
+
+    def test_outlier_mask_same_index(self, stats_module, df_with_outliers):
+        """Test that result has the same index as input."""
+        result = stats_module.get_outlier_mask(df_with_outliers)
+        pd.testing.assert_index_equal(result.index, df_with_outliers.index)
+
+    def test_outlier_mask_detects_outlier(self, stats_module, df_with_outliers):
+        """Test that the row with value 100 is flagged."""
+        result = stats_module.get_outlier_mask(df_with_outliers)
+        # Row index 8 has value 100 which is an outlier
+        idx_100 = df_with_outliers[df_with_outliers['values'] == 100].index[0]
+        assert result.loc[idx_100] == True
+
+    def test_outlier_mask_no_outliers(self, stats_module, df_without_outliers):
+        """Test that DataFrame without outliers returns all False."""
+        result = stats_module.get_outlier_mask(df_without_outliers)
+        assert result.sum() == 0
+
+    def test_outlier_mask_with_columns(self, stats_module, df_with_outliers):
+        """Test get_outlier_mask with specific columns parameter."""
+        result = stats_module.get_outlier_mask(df_with_outliers, columns=['normal'])
+        # 'normal' column (1-12 sequential) should have no outliers
+        assert result.sum() == 0
+
+    def test_outlier_mask_specific_column_with_outlier(self, stats_module, df_with_outliers):
+        """Test get_outlier_mask filtering to column with outliers."""
+        result = stats_module.get_outlier_mask(df_with_outliers, columns=['values'])
+        assert result.sum() >= 1
+
+    def test_outlier_mask_all_same_values(self, stats_module):
+        """Test get_outlier_mask with constant data."""
+        df = pd.DataFrame({'values': [5, 5, 5, 5, 5]})
+        result = stats_module.get_outlier_mask(df)
+        assert result.sum() == 0
+
+    def test_outlier_mask_non_numeric_ignored(self, stats_module, sample_mixed_df):
+        """Test that non-numeric columns are ignored."""
+        result = stats_module.get_outlier_mask(sample_mixed_df)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_mixed_df)

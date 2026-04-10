@@ -491,8 +491,10 @@ class TestAdjustedR2:
 
         model.fit(X, y)
 
-        with pytest.raises(ValueError, match="doit être supérieur"):
-            model.compute_adjusted_r2(X, y)
+        import math
+        with pytest.warns(UserWarning, match="insuffisant"):
+            result = model.compute_adjusted_r2(X, y)
+        assert math.isnan(result)
 
     def test_compute_adjusted_r2_single_feature(self, model, single_feature_data):
         """Test adjusted R² with single feature."""
