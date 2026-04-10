@@ -120,18 +120,6 @@ class Config:
 
     # Paramètres des features d'engagement
     SESSION_GAP_MINUTES = 30  # Intervalle de temps nécessaire pour définir une nouvelle session
-    FEATURE_EVENT_TYPES = ['consultation', 'depot', 'forum']  # Types d'événements pour le suivi de l'engagement
-
-    # Evenement category mappings
-    EVENEMENT_CATEGORIES = {
-        'Cours consulté': 'consultation',
-        'Module de cours consulté': 'consultation',
-        'Activité de devoir consultée': 'consultation',
-        'Un fichier a été déposé.': 'depot',
-        'Une tentative a été soumise.': 'depot',
-        'Discussion consultée': 'forum',
-        'Message créé': 'forum',
-    }
 
 
     # --- FEATURE SELECTION ---
@@ -403,18 +391,6 @@ class Config:
             raise TypeError(
                 f"PLOT_FIGSIZE doit être un tuple, "
                 f"reçu: {type(self.PLOT_FIGSIZE).__name__}"
-            )
-
-        if not isinstance(self.FEATURE_EVENT_TYPES, list):
-            raise TypeError(
-                f"FEATURE_EVENT_TYPES doit être une liste (list), "
-                f"reçu: {type(self.FEATURE_EVENT_TYPES).__name__}"
-            )
-
-        if not isinstance(self.EVENEMENT_CATEGORIES, dict):
-            raise TypeError(
-                f"EVENEMENT_CATEGORIES doit être un dictionnaire (dict), "
-                f"reçu: {type(self.EVENEMENT_CATEGORIES).__name__}"
             )
 
         # Validation du TEST_SPLIT_RATIO

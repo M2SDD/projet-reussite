@@ -187,22 +187,10 @@ class TestConfigDefaultInitialization:
         assert config.DUPLICATE_KEEP == 'first'
         assert config.DUPLICATE_SUBSET is None
 
-    def test_default_evenement_categories(self, config):
-        """Test that evenement categories mapping is initialized."""
-        assert hasattr(config, 'EVENEMENT_CATEGORIES')
-        assert isinstance(config.EVENEMENT_CATEGORIES, dict)
-        assert 'Cours consulté' in config.EVENEMENT_CATEGORIES
-
     def test_default_session_gap_minutes(self, config):
         """Test that session gap setting is initialized."""
         assert hasattr(config, 'SESSION_GAP_MINUTES')
         assert config.SESSION_GAP_MINUTES == 30
-
-    def test_default_feature_event_types(self, config):
-        """Test that feature event types list is initialized."""
-        assert hasattr(config, 'FEATURE_EVENT_TYPES')
-        assert isinstance(config.FEATURE_EVENT_TYPES, list)
-        assert 'consultation' in config.FEATURE_EVENT_TYPES
 
 
 class TestConfigParameterTypes:
@@ -242,8 +230,6 @@ class TestConfigParameterTypes:
     def test_collection_parameters_types(self, config):
         """Test that collection parameters are correct types."""
         assert isinstance(config.PLOT_FIGSIZE, tuple)
-        assert isinstance(config.FEATURE_EVENT_TYPES, list)
-        assert isinstance(config.EVENEMENT_CATEGORIES, dict)
 
     def test_plot_figsize_tuple_elements(self, config):
         """Test that PLOT_FIGSIZE tuple has correct structure."""
@@ -609,20 +595,6 @@ class TestConfigValidation:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_type_error_feature_event_types(self):
-        """Test that non-list FEATURE_EVENT_TYPES raises TypeError."""
-        config_data = {'FEATURE_EVENT_TYPES': 'view,submit,forum'}
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        json.dump(config_data, f)
-        f.close()
-
-        try:
-            with pytest.raises(TypeError, match='FEATURE_EVENT_TYPES doit être une liste'):
-                Config(config_file=f.name)
-        finally:
-            if os.path.exists(f.name):
-                os.unlink(f.name)
-
     def test_validation_edge_case_train_test_split_boundary_low(self):
         """Test boundary value just above 0 for TEST_SPLIT_RATIO."""
         config_data = {'TEST_SPLIT_RATIO': 0.001}
@@ -913,7 +885,6 @@ class TestConfigExport:
 
             # Verify collection types
             assert isinstance(exported_data['PLOT_FIGSIZE'], list)  # Tuple exported as list in JSON
-            assert isinstance(exported_data['FEATURE_EVENT_TYPES'], list)
         finally:
             os.unlink(f.name)
 
