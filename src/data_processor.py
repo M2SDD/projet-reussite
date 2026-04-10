@@ -735,7 +735,8 @@ class DataProcessor:
         result = self.preprocess_features(result)
 
         # 8. Remove outliers
-        result = self.remove_outliers(result)
+        if self.config.OUTLIER_REMOVAL_ENABLED:
+            result = self.remove_outliers(result)
 
         # 9. Rename features to French
         result = self.rename_features_to_french(result)
