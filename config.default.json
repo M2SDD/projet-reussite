@@ -11,6 +11,32 @@
   "OUTPUT_DIR": "output",
   "_OUTPUT_DIR_description": "Répertoire de sortie pour les fichiers générés",
 
+  "LOGS_REQUIRED_COLUMNS": [
+    "heure",
+    "pseudo",
+    "contexte",
+    "composant",
+    "evenement"
+  ],
+  "_LOGS_REQUIRED_COLUMNS_description": "Noms des colonnes attendues pour les logs d'activité",
+
+
+  "NOTES_REQUIRED_COLUMNS": [
+    "pseudo",
+    "note"
+  ],
+  "_NOTES_REQUIRED_COLUMNS_description": "Noms des colonnes attendues pour les notes des étudiants",
+
+  "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
+  "_DATETIME_FORMAT_description": "Format de date/heure pour l'analyse des timestamps des logs",
+
+
+  "MERGE_KEY": "pseudo",
+  "_MERGE_KEY_description": "Clé de fusion pour combiner les données de logs et de notes",
+
+  "TARGET_COLUMN": "note",
+  "_TARGET_COLUMN_description": "Nom de la colonne cible pour la prédiction (note des étudiants)",
+
   "NOTE_MIN": 0,
   "_NOTE_MIN_description": "Note minimale (système de notation français)",
 
@@ -23,29 +49,15 @@
   "RISK_THRESHOLD_MEDIUM": 12,
   "_RISK_THRESHOLD_MEDIUM_description": "Seuil de risque moyen - en dessous de cette note indique un risque moyen",
 
-  "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
-  "_DATETIME_FORMAT_description": "Format de date/heure pour l'analyse des timestamps des logs",
-
   "DUPLICATE_KEEP": "first",
   "_DUPLICATE_KEEP_description": "Stratégie de conservation des doublons ('first', 'last', ou false)",
 
   "DUPLICATE_SUBSET": null,
   "_DUPLICATE_SUBSET_description": "Colonnes à considérer pour la détection des doublons (null = toutes les colonnes)",
 
-  "LOGS_COLUMN_MAPPING": {
-    "heure": "heure",
-    "pseudo": "pseudo",
-    "contexte": "contexte",
-    "composant": "composant",
-    "evenement": "evenement"
-  },
-  "_LOGS_COLUMN_MAPPING_description": "Mapping des noms de colonnes du CSV brut vers les noms internes pour les logs",
+  "RAPID_EVENT_THRESHOLD_SECONDS": 5,
+    "_RAPID_EVENT_THRESHOLD_SECONDS_description": "Seuil pour le dédoublement des événements rapides (miss-clicks ?)",
 
-  "NOTES_COLUMN_MAPPING": {
-    "pseudo": "pseudo",
-    "note": "note"
-  },
-  "_NOTES_COLUMN_MAPPING_description": "Mapping des noms de colonnes du CSV brut vers les noms internes pour les notes",
 
   "FEATURE_HOUR_OF_DAY": true,
   "_FEATURE_HOUR_OF_DAY_description": "Active l'extraction de l'heure de la journée comme feature",
@@ -62,31 +74,26 @@
   "SESSION_GAP_MINUTES": 30,
   "_SESSION_GAP_MINUTES_description": "Intervalle de temps (en minutes) pour définir une nouvelle session",
 
-  "FEATURE_EVENT_TYPES": ["view", "submit", "forum"],
+  "FEATURE_EVENT_TYPES": ["consultation", "depot", "forum"],
   "_FEATURE_EVENT_TYPES_description": "Types d'événements à suivre pour l'analyse d'engagement",
 
-  "COMPOSANT_CATEGORIES": {
-    "Système": "system",
-    "Devoir": "assignment",
-    "Fichier": "file",
-    "Forum": "forum",
-    "Dossier": "folder",
-    "URL": "url",
-    "Page": "page",
-    "Cours": "course"
-  },
-  "_COMPOSANT_CATEGORIES_description": "Mapping des types de composants Moodle vers des catégories simplifiées",
-
   "EVENEMENT_CATEGORIES": {
-    "Cours consulté": "view",
-    "Module de cours consulté": "view",
-    "Activité de devoir consultée": "view",
-    "Un fichier a été déposé.": "submit",
-    "Une tentative a été soumise.": "submit",
+    "Cours consulté": "consultation",
+    "Module de cours consulté": "consultation",
+    "Activité de devoir consultée": "consultation",
+    "Un fichier a été déposé.": "depot",
+    "Une tentative a été soumise.": "depot",
     "Discussion consultée": "forum",
     "Message créé": "forum"
   },
   "_EVENEMENT_CATEGORIES_description": "Mapping des types d'événements Moodle vers des catégories d'action",
+
+  "OUTLIER_REMOVAL_ENABLED": true,
+  "_OUTLIER_REMOVAL_ENABLED_description": "Active la suppression des outliers dans les données",
+
+  "NA_FILL_STRATEGY": "zero",
+  "_NA_FILL_STRATEGY_description": "Stratégie de remplissage des valeurs manquantes ('zero', 'mean', 'median')",
+
 
   "TEST_SPLIT_RATIO": 0.2,
   "_TEST_SPLIT_RATIO_description": "Ratio de division test/train pour le ML (0.8 = 80% entraînement, 20% test)",
@@ -97,26 +104,27 @@
   "RANDOM_STATE": 42,
   "_RANDOM_STATE_description": "Graine aléatoire pour la reproductibilité des résultats",
 
-  "RF_N_ESTIMATORS": 100,
+
+  "RF_N_ESTIMATORS": 200,
   "_RF_N_ESTIMATORS_description": "Nombre d'arbres dans la forêt aléatoire (Random Forest)",
 
-  "RF_MAX_DEPTH": null,
+  "RF_MAX_DEPTH": 10,
   "_RF_MAX_DEPTH_description": "Profondeur maximale des arbres (null = illimitée)",
 
-  "RF_MIN_SAMPLES_SPLIT": 2,
+  "RF_MIN_SAMPLES_SPLIT": 5,
   "_RF_MIN_SAMPLES_SPLIT_description": "Nombre minimum d'échantillons requis pour diviser un noeud interne",
 
-  "RF_MIN_SAMPLES_LEAF": 1,
+  "RF_MIN_SAMPLES_LEAF": 3,
   "_RF_MIN_SAMPLES_LEAF_description": "Nombre minimum d'échantillons requis pour être dans une feuille",
 
   "RF_MAX_FEATURES": "sqrt",
   "_RF_MAX_FEATURES_description": "Nombre de features à considérer pour la meilleure division ('sqrt', 'log2', 'auto', ou un nombre)",
 
-  "RF_BOOTSTRAP": true,
+  "RF_BOOTSTRAP": false,
   "_RF_BOOTSTRAP_description": "Utiliser des échantillons bootstrap lors de la construction des arbres",
 
-  "RF_CRITERION": "gini",
-  "_RF_CRITERION_description": "Fonction pour mesurer la qualité d'une division ('gini' ou 'entropy')",
+  "RF_CRITERION": "friedman_mse",
+  "_RF_CRITERION_description": "Fonction pour mesurer la qualité d'une division",
 
   "GB_N_ESTIMATORS": 100,
   "_GB_N_ESTIMATORS_description": "Nombre d'étapes de boosting pour Gradient Boosting",
@@ -126,6 +134,44 @@
 
   "GB_MAX_DEPTH": 3,
   "_GB_MAX_DEPTH_description": "Profondeur maximale des estimateurs individuels pour Gradient Boosting",
+
+  "GB_MIN_SAMPLES_SPLIT": 10,
+  "_GB_MIN_SAMPLES_SPLIT_description": "Nombre minimum d'échantillons requis pour diviser un noeud interne dans Gradient Boosting",
+
+  "GB_SUBSAMPLE": 0.8,
+  "_GB_SUBSAMPLE_description": "Fraction des échantillons à utiliser pour entraîner chaque estimateur dans Gradient Boosting",
+
+  "GB_CRITERION": "friedman_mse",
+  "_GB_CRITERION_description": "Fonction pour mesurer la qualité d'une division dans Gradient Boosting",
+
+  "FEATURE_NAMES_FR": {
+        "total_actions": "actions_totales",
+        "unique_days_active": "jours_actifs_uniques",
+        "actions_per_day": "actions_par_jour",
+        "session_count": "nombre_sessions",
+        "view_count": "nb_consultations",
+        "submission_count": "nb_soumissions",
+        "forum_count": "nb_forums",
+        "quiz_count": "nb_quiz",
+        "download_count": "nb_telechargements",
+        "other_count": "nb_autres",
+        "streak_days": "jours_consecutifs_max",
+        "avg_gap_days": "ecart_moyen_jours",
+        "std_gap_days": "ecart_type_jours",
+        "study_frequency": "frequence_etude",
+        "component_diversity": "diversite_composants",
+        "context_diversity": "diversite_contextes",
+        "avg_interactions_per_component": "interactions_moy_par_composant",
+        "component_switch_rate": "taux_changement_composant",
+        "peak_hour": "heure_pointe",
+        "morning_activity": "activite_matin",
+        "afternoon_activity": "activite_apres_midi",
+        "evening_activity": "activite_soir",
+        "night_activity": "activite_nuit",
+        "weekend_activity_ratio": "ratio_activite_weekend",
+        "comp_": "comp_"
+  },
+    "_FEATURE_NAMES_FR_description": "Mapping des noms de features en anglais vers des noms en français (à supprimer)",
 
   "PLOT_DPI": 300,
   "_PLOT_DPI_description": "Résolution en DPI pour les graphiques sauvegardés",

@@ -51,12 +51,13 @@ class EnsembleRegressor(BaseRegressor):
         """Entraîne le modèle Random Forest ou Gradient Boosting."""
         if self.model_type == 'random_forest':
             self.model = RandomForestRegressor(
-                n_estimators=getattr(self.config, 'RF_N_ESTIMATORS', 100),
-                max_depth=getattr(self.config, 'RF_MAX_DEPTH', None),
-                min_samples_split=getattr(self.config, 'RF_MIN_SAMPLES_SPLIT', 2),
-                min_samples_leaf=getattr(self.config, 'RF_MIN_SAMPLES_LEAF', 1),
+                n_estimators=getattr(self.config, 'RF_N_ESTIMATORS', 200),
+                max_depth=getattr(self.config, 'RF_MAX_DEPTH', 10),
+                min_samples_split=getattr(self.config, 'RF_MIN_SAMPLES_SPLIT', 5),
+                min_samples_leaf=getattr(self.config, 'RF_MIN_SAMPLES_LEAF', 3),
                 max_features=getattr(self.config, 'RF_MAX_FEATURES', 'sqrt'),
-                bootstrap=getattr(self.config, 'RF_BOOTSTRAP', True),
+                bootstrap=getattr(self.config, 'RF_BOOTSTRAP', False),
+                criterion=getattr(self.config, 'RF_CRITERION', 'friedman_mse'),
                 random_state=getattr(self.config, 'RANDOM_STATE', 42),
                 n_jobs=-1
             )
@@ -65,6 +66,9 @@ class EnsembleRegressor(BaseRegressor):
                 n_estimators=getattr(self.config, 'GB_N_ESTIMATORS', 100),
                 learning_rate=getattr(self.config, 'GB_LEARNING_RATE', 0.1),
                 max_depth=getattr(self.config, 'GB_MAX_DEPTH', 3),
+                min_samples_split=getattr(self.config, 'GB_MIN_SAMPLES_SPLIT', 10),
+                subsample=getattr(self.config, 'GB_SUBSAMPLE', 0.8),
+                criterion=getattr(self.config, 'GB_CRITERION', 'friedman_mse'),
                 random_state=getattr(self.config, 'RANDOM_STATE', 42)
             )
 
