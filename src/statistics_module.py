@@ -120,7 +120,10 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire contenant les statistiques calculées.
         """
-        pass
+        if isinstance(data, pd.DataFrame):
+            data = data.select_dtypes(include=[np.number])
+        desc = data.describe()
+        return desc.to_dict() if isinstance(desc, pd.DataFrame) else desc.to_dict()
 
     def calculate_central_tendency(self, data):
         """
@@ -132,7 +135,13 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire avec mean, median, mode.
         """
-        pass
+        result = {
+            'mean': float(data.mean()),
+            'median': float(data.median()),
+        }
+        mode_values = data.mode()
+        result['mode'] = float(mode_values.iloc[0]) if len(mode_values) > 0 else None
+        return result
 
     def calculate_dispersion(self, data):
         """
@@ -144,7 +153,14 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire avec variance, std, range, etc.
         """
-        pass
+        q1 = float(data.quantile(0.25))
+        q3 = float(data.quantile(0.75))
+        return {
+            'variance': float(data.var()),
+            'std': float(data.std()),
+            'range': float(data.max() - data.min()),
+            'iqr': q3 - q1,
+        }
 
     def calculate_distribution(self, data):
         """
@@ -156,7 +172,10 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire avec skewness, kurtosis.
         """
-        pass
+        return {
+            'skewness': float(data.skew()),
+            'kurtosis': float(data.kurtosis()),
+        }
 
     def calculate_quantiles(self, data, quantiles=None):
         """
@@ -169,7 +188,9 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire avec les quantiles calculés.
         """
-        pass
+        if quantiles is None:
+            quantiles = [0.25, 0.5, 0.75]
+        return {str(q): float(data.quantile(q)) for q in quantiles}
 
     def compute_summary_statistics(self, df):
         """
@@ -315,7 +336,49 @@ class StatisticsModule:
         Returns:
             dict: Dictionnaire contenant toutes les statistiques calculées.
         """
-        pass
+        if isinstance(data, pd.DataFrame):
+            series = data.select_dtypes(include=[np.number]).stack()
+        else:
+            series = data
+
+        return {
+            'basic_stats': self.calculate_basic_stats(data),
+            'central_tendency': self.calculate_central_tendency(series),
+            'dispersion': self.calculate_dispersion(series),
+            'distribution': self.calculate_distribution(series),
+            'quantiles': self.calculate_quantiles(series),
+        }
+
+    def get_outlier_mask(self, df, columns=None):
+        """
+        Retourne un masque booléen indiquant les lignes contenant au moins un outlier.
+
+        Utilise la méthode IQR pour détecter les outliers sur les colonnes numériques.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame à analyser.
+            columns (list, optional): Liste des colonnes à analyser. Si None, toutes les colonnes numériques.
+
+        Returns:
+            pd.Series: Série booléenne (True = la ligne contient au moins un outlier).
+        """
+        if columns is not None:
+            sub_df = df[columns]
+        else:
+            sub_df = df
+
+        numeric_df = sub_df.select_dtypes(include=[np.number])
+        mask = pd.Series(False, index=df.index)
+
+        for col in numeric_df.columns:
+            q1 = numeric_df[col].quantile(0.25)
+            q3 = numeric_df[col].quantile(0.75)
+            iqr = q3 - q1
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
+            mask = mask | (numeric_df[col] < lower) | (numeric_df[col] > upper)
+
+        return mask
 
     def generate_report(self, df):
         """

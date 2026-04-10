@@ -1149,3 +1149,164 @@ class TestConfigIntegration:
         assert processor1.config.NOTE_MIN == 5
         assert processor2.config.NOTE_MIN == 0
         assert processor1.config is not processor2.config
+
+
+class TestConfigNewDataProcessingParameters:
+    """Test new data processing parameters added for the refactoring."""
+
+    def test_default_rapid_event_threshold(self, config):
+        """Test that RAPID_EVENT_THRESHOLD_SECONDS has correct default."""
+        assert hasattr(config, 'RAPID_EVENT_THRESHOLD_SECONDS')
+        assert config.RAPID_EVENT_THRESHOLD_SECONDS == 5
+        assert isinstance(config.RAPID_EVENT_THRESHOLD_SECONDS, (int, float))
+
+    def test_default_outlier_removal_enabled(self, config):
+        """Test that OUTLIER_REMOVAL_ENABLED has correct default."""
+        assert hasattr(config, 'OUTLIER_REMOVAL_ENABLED')
+        assert config.OUTLIER_REMOVAL_ENABLED is True
+        assert isinstance(config.OUTLIER_REMOVAL_ENABLED, bool)
+
+    def test_default_na_fill_strategy(self, config):
+        """Test that NA_FILL_STRATEGY has correct default."""
+        assert hasattr(config, 'NA_FILL_STRATEGY')
+        assert config.NA_FILL_STRATEGY == 'zero'
+        assert isinstance(config.NA_FILL_STRATEGY, str)
+
+    def test_default_feature_names_fr(self, config):
+        """Test that FEATURE_NAMES_FR dictionary is initialized correctly."""
+        assert hasattr(config, 'FEATURE_NAMES_FR')
+        assert isinstance(config.FEATURE_NAMES_FR, dict)
+        assert len(config.FEATURE_NAMES_FR) > 0
+        # Verify some key mappings
+        assert config.FEATURE_NAMES_FR['total_actions'] == 'actions_totales'
+        assert config.FEATURE_NAMES_FR['session_count'] == 'nombre_sessions'
+        assert config.FEATURE_NAMES_FR['view_count'] == 'nb_consultations'
+        assert config.FEATURE_NAMES_FR['component_diversity'] == 'diversite_composants'
+        assert config.FEATURE_NAMES_FR['peak_hour'] == 'heure_pointe'
+
+    def test_validation_rapid_event_threshold_negative(self):
+        """Test that negative RAPID_EVENT_THRESHOLD_SECONDS raises ValueError."""
+        config_data = {'RAPID_EVENT_THRESHOLD_SECONDS': -1}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='RAPID_EVENT_THRESHOLD_SECONDS doit être positif ou nul'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_rapid_event_threshold_zero(self):
+        """Test that RAPID_EVENT_THRESHOLD_SECONDS = 0 is valid (no filtering)."""
+        config_data = {'RAPID_EVENT_THRESHOLD_SECONDS': 0}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.RAPID_EVENT_THRESHOLD_SECONDS == 0
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_rapid_event_threshold_type_error(self):
+        """Test that non-numeric RAPID_EVENT_THRESHOLD_SECONDS raises TypeError."""
+        config_data = {'RAPID_EVENT_THRESHOLD_SECONDS': 'fast'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='RAPID_EVENT_THRESHOLD_SECONDS doit être un nombre'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_outlier_removal_enabled_type_error(self):
+        """Test that non-boolean OUTLIER_REMOVAL_ENABLED raises TypeError."""
+        config_data = {'OUTLIER_REMOVAL_ENABLED': 'yes'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='OUTLIER_REMOVAL_ENABLED doit être un booléen'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_na_fill_strategy_invalid(self):
+        """Test that invalid NA_FILL_STRATEGY raises ValueError."""
+        config_data = {'NA_FILL_STRATEGY': 'interpolate'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(ValueError, match='NA_FILL_STRATEGY doit être l\'un de'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_na_fill_strategy_type_error(self):
+        """Test that non-string NA_FILL_STRATEGY raises TypeError."""
+        config_data = {'NA_FILL_STRATEGY': 123}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='NA_FILL_STRATEGY doit être une chaîne'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_validation_feature_names_fr_type_error(self):
+        """Test that non-dict FEATURE_NAMES_FR raises TypeError."""
+        config_data = {'FEATURE_NAMES_FR': 'invalid'}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            with pytest.raises(TypeError, match='FEATURE_NAMES_FR doit être un dictionnaire'):
+                Config(config_file=f.name)
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)
+
+    def test_na_fill_strategy_valid_values(self):
+        """Test that all valid NA_FILL_STRATEGY values are accepted."""
+        for strategy in ['zero', 'mean', 'median']:
+            config_data = {'NA_FILL_STRATEGY': strategy}
+            f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+            json.dump(config_data, f)
+            f.close()
+
+            try:
+                config = Config(config_file=f.name)
+                assert config.NA_FILL_STRATEGY == strategy
+            finally:
+                if os.path.exists(f.name):
+                    os.unlink(f.name)
+
+    def test_rapid_event_threshold_loaded_from_json(self):
+        """Test that RAPID_EVENT_THRESHOLD_SECONDS can be overridden from JSON."""
+        config_data = {'RAPID_EVENT_THRESHOLD_SECONDS': 10}
+        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(config_data, f)
+        f.close()
+
+        try:
+            config = Config(config_file=f.name)
+            assert config.RAPID_EVENT_THRESHOLD_SECONDS == 10
+        finally:
+            if os.path.exists(f.name):
+                os.unlink(f.name)

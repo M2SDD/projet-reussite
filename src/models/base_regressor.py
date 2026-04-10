@@ -22,6 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Any, Optional, Union
+import warnings
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -144,7 +145,8 @@ class BaseRegressor(ABC):
             p = 1 if len(X_array.shape) == 1 else X_array.shape[1]
 
         if n - p - 1 <= 0:
-            raise ValueError("Le nombre d'échantillons doit être supérieur au nombre de features + 1.")
+            warnings.warn("Le nombre d'échantillons est insuffisant pour calculer le R² ajusté. Retourne NaN.")
+            return float('nan')
 
         return 1 - ((1 - r2) * (n - 1) / (n - p - 1))
 
