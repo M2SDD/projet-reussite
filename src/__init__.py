@@ -22,8 +22,11 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 from .config import Config
 
+# data
 from .data.data_loader import DataLoader
+from .data.feature_extractor import FeatureExtractor
 from .data_processor import DataProcessor
+from .data.data_cleaner import DataCleaner
 
 # models
 from .models.ensemble_regressor import EnsembleRegressor
@@ -39,6 +42,8 @@ from .statistics_module import StatisticsModule
 __all__ = [
     'Config',
     'DataLoader',
+    'FeatureExtractor',
+    'DataCleaner',
     'DataProcessor',
     'EnsembleRegressor',
     'LinearRegressor',
