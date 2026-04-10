@@ -187,21 +187,6 @@ class TestConfigDefaultInitialization:
         assert config.DUPLICATE_KEEP == 'first'
         assert config.DUPLICATE_SUBSET is None
 
-    def test_default_column_mappings(self, config):
-        """Test that column mappings are initialized correctly."""
-        assert hasattr(config, 'LOGS_COLUMN_MAPPING')
-        assert hasattr(config, 'NOTES_COLUMN_MAPPING')
-        assert isinstance(config.LOGS_COLUMN_MAPPING, dict)
-        assert isinstance(config.NOTES_COLUMN_MAPPING, dict)
-        assert 'pseudo' in config.LOGS_COLUMN_MAPPING
-        assert 'note' in config.NOTES_COLUMN_MAPPING
-
-    def test_default_composant_categories(self, config):
-        """Test that composant categories mapping is initialized."""
-        assert hasattr(config, 'COMPOSANT_CATEGORIES')
-        assert isinstance(config.COMPOSANT_CATEGORIES, dict)
-        assert 'Système' in config.COMPOSANT_CATEGORIES
-
     def test_default_evenement_categories(self, config):
         """Test that evenement categories mapping is initialized."""
         assert hasattr(config, 'EVENEMENT_CATEGORIES')
@@ -217,7 +202,7 @@ class TestConfigDefaultInitialization:
         """Test that feature event types list is initialized."""
         assert hasattr(config, 'FEATURE_EVENT_TYPES')
         assert isinstance(config.FEATURE_EVENT_TYPES, list)
-        assert 'view' in config.FEATURE_EVENT_TYPES
+        assert 'consultation' in config.FEATURE_EVENT_TYPES
 
 
 class TestConfigParameterTypes:
@@ -258,9 +243,6 @@ class TestConfigParameterTypes:
         """Test that collection parameters are correct types."""
         assert isinstance(config.PLOT_FIGSIZE, tuple)
         assert isinstance(config.FEATURE_EVENT_TYPES, list)
-        assert isinstance(config.LOGS_COLUMN_MAPPING, dict)
-        assert isinstance(config.NOTES_COLUMN_MAPPING, dict)
-        assert isinstance(config.COMPOSANT_CATEGORIES, dict)
         assert isinstance(config.EVENEMENT_CATEGORIES, dict)
 
     def test_plot_figsize_tuple_elements(self, config):
@@ -627,20 +609,6 @@ class TestConfigValidation:
             if os.path.exists(f.name):
                 os.unlink(f.name)
 
-    def test_validation_type_error_logs_column_mapping(self):
-        """Test that non-dict LOGS_COLUMN_MAPPING raises TypeError."""
-        config_data = {'LOGS_COLUMN_MAPPING': 'invalid'}
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        json.dump(config_data, f)
-        f.close()
-
-        try:
-            with pytest.raises(TypeError, match='LOGS_COLUMN_MAPPING doit être un dictionnaire'):
-                Config(config_file=f.name)
-        finally:
-            if os.path.exists(f.name):
-                os.unlink(f.name)
-
     def test_validation_type_error_feature_event_types(self):
         """Test that non-list FEATURE_EVENT_TYPES raises TypeError."""
         config_data = {'FEATURE_EVENT_TYPES': 'view,submit,forum'}
@@ -823,12 +791,12 @@ class TestConfigFileLoading:
 class TestConfigExport:
     """Test configuration export functionality."""
 
-    def test_export_defaults_to_json(self, config):
+    def test_save_to_file_to_json(self, config):
         """Test exporting configuration to JSON file."""
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
             assert os.path.exists(f.name)
 
             # Verify the exported file can be loaded
@@ -846,7 +814,7 @@ class TestConfigExport:
         temp_dir = tempfile.mkdtemp()
         try:
             nested_path = os.path.join(temp_dir, 'subdir', 'config.json')
-            config.export_defaults(nested_path)
+            config.save_to_file(nested_path)
             assert os.path.exists(nested_path)
         finally:
             # Cleanup
@@ -858,7 +826,7 @@ class TestConfigExport:
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
             config2 = Config(config_file=f.name)
 
             # Verify key parameters match
@@ -873,7 +841,7 @@ class TestConfigExport:
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
 
             with open(f.name, 'r', encoding='utf-8') as exported:
                 exported_data = json.load(exported)
@@ -892,8 +860,6 @@ class TestConfigExport:
             assert 'PLOT_DPI' in exported_data
             assert 'PLOT_FIGSIZE' in exported_data
             assert 'FEATURE_HOUR_OF_DAY' in exported_data
-            assert 'LOGS_COLUMN_MAPPING' in exported_data
-            assert 'COMPOSANT_CATEGORIES' in exported_data
         finally:
             os.unlink(f.name)
 
@@ -908,7 +874,7 @@ class TestConfigExport:
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
 
             with open(f.name, 'r', encoding='utf-8') as exported:
                 exported_data = json.load(exported)
@@ -926,7 +892,7 @@ class TestConfigExport:
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
 
             with open(f.name, 'r', encoding='utf-8') as exported:
                 exported_data = json.load(exported)
@@ -948,8 +914,6 @@ class TestConfigExport:
             # Verify collection types
             assert isinstance(exported_data['PLOT_FIGSIZE'], list)  # Tuple exported as list in JSON
             assert isinstance(exported_data['FEATURE_EVENT_TYPES'], list)
-            assert isinstance(exported_data['LOGS_COLUMN_MAPPING'], dict)
-            assert isinstance(exported_data['COMPOSANT_CATEGORIES'], dict)
         finally:
             os.unlink(f.name)
 
@@ -965,7 +929,7 @@ class TestConfigExport:
             except ImportError:
                 # PyYAML not available, test should raise ImportError
                 with pytest.raises(ImportError, match='PyYAML'):
-                    config.export_defaults(f.name)
+                    config.save_to_file(f.name)
         finally:
             if os.path.exists(f.name):
                 os.unlink(f.name)
@@ -975,7 +939,7 @@ class TestConfigExport:
         f = tempfile.NamedTemporaryFile(suffix='.txt', delete=False)
         f.close()
         try:
-            config.export_defaults(f.name)
+            config.save_to_file(f.name)
             assert os.path.exists(f.name)
 
             # Should be valid JSON
@@ -1090,7 +1054,7 @@ class TestConfigIntegration:
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
-            config1.export_defaults(f.name)
+            config1.save_to_file(f.name)
 
             # Reload config
             config2 = Config(config_file=f.name)
@@ -1172,18 +1136,6 @@ class TestConfigNewDataProcessingParameters:
         assert config.NA_FILL_STRATEGY == 'zero'
         assert isinstance(config.NA_FILL_STRATEGY, str)
 
-    def test_default_feature_names_fr(self, config):
-        """Test that FEATURE_NAMES_FR dictionary is initialized correctly."""
-        assert hasattr(config, 'FEATURE_NAMES_FR')
-        assert isinstance(config.FEATURE_NAMES_FR, dict)
-        assert len(config.FEATURE_NAMES_FR) > 0
-        # Verify some key mappings
-        assert config.FEATURE_NAMES_FR['total_actions'] == 'actions_totales'
-        assert config.FEATURE_NAMES_FR['session_count'] == 'nombre_sessions'
-        assert config.FEATURE_NAMES_FR['view_count'] == 'nb_consultations'
-        assert config.FEATURE_NAMES_FR['component_diversity'] == 'diversite_composants'
-        assert config.FEATURE_NAMES_FR['peak_hour'] == 'heure_pointe'
-
     def test_validation_rapid_event_threshold_negative(self):
         """Test that negative RAPID_EVENT_THRESHOLD_SECONDS raises ValueError."""
         config_data = {'RAPID_EVENT_THRESHOLD_SECONDS': -1}
@@ -1263,20 +1215,6 @@ class TestConfigNewDataProcessingParameters:
 
         try:
             with pytest.raises(TypeError, match='NA_FILL_STRATEGY doit être une chaîne'):
-                Config(config_file=f.name)
-        finally:
-            if os.path.exists(f.name):
-                os.unlink(f.name)
-
-    def test_validation_feature_names_fr_type_error(self):
-        """Test that non-dict FEATURE_NAMES_FR raises TypeError."""
-        config_data = {'FEATURE_NAMES_FR': 'invalid'}
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-        json.dump(config_data, f)
-        f.close()
-
-        try:
-            with pytest.raises(TypeError, match='FEATURE_NAMES_FR doit être un dictionnaire'):
                 Config(config_file=f.name)
         finally:
             if os.path.exists(f.name):
