@@ -1137,8 +1137,10 @@ class DataProcessor:
             raise ValueError(f"La colonne cible '{target}' n'existe pas dans le DataFrame.")
 
         # Separate target from features
-        y = df[target]
-        X = df.drop(columns=[target])
+        # Drop rows where target is NaN before fitting
+        df_clean = df.dropna(subset=[target])
+        y = df_clean[target]
+        X = df_clean.drop(columns=[target])
 
         # Select only numeric columns for feature selection
         numeric_cols = X.select_dtypes(include=['number']).columns.tolist()

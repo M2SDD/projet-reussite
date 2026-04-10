@@ -258,7 +258,7 @@ if __name__ == '__main__':
 
     # Generate statistics report for engagement features
     print("Generating descriptive statistics report for engagement features...")
-    engagement_report = stats.generate_report(engagement_df)
+    engagement_report = stats.generate_report(analysis_df[engagement_cols])
     print(engagement_report)
     print()
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     # Prepare final dataset for regression (merge selected features with grades)
     print("Preparing regression dataset...")
     regression_features = [col for col in best_features_df.columns]
-    regression_df = analysis_df[regression_features + ['note']].copy()
+    regression_df = analysis_df[regression_features + ['note']].dropna(subset=['note']).copy()
 
     print(f"  - Features: {len(regression_features)}")
     print(f"  - Samples: {len(regression_df)}")
@@ -398,7 +398,7 @@ if __name__ == '__main__':
     # Prepare final dataset for regression (merge selected features with grades)
     print("Preparing regression dataset...")
     regression_features = [col for col in best_features_df.columns]
-    regression_df = analysis_df[regression_features + ['note']].copy()
+    regression_df = analysis_df[regression_features + ['note']].dropna(subset=['note']).copy()
 
     print(f"  - Features: {len(regression_features)}")
     print(f"  - Samples: {len(regression_df)}")
@@ -536,6 +536,9 @@ if __name__ == '__main__':
     print("✓ Regression Model:          Completed")
     print()
     print(f"Final {reco['best_model']} model ready for deployment with {len(regression_features)} features")
-    print(f"Model performance: R²={reco['metrics']['r2']:.4f}, RMSE={reco['metrics']['rmse']:.4f}")
+    if reco.get('metrics') is not None:
+        print(f"Model performance: R²={reco['metrics']['r2']:.4f}, RMSE={reco['metrics']['rmse']:.4f}")
+    else:
+        print("Model performance: metrics unavailable (insufficient samples)")
     print()
     print("=" * 60)
