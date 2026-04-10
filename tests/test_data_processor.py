@@ -504,7 +504,31 @@ class TestDataProcessorRealFiles:
         assert len(result) > 0
         assert 'pseudo' in result.columns
         assert 'note' in result.columns
-        assert 'total_actions' in result.columns
+        assert 'actions_totales' in result.columns
+
+    def test_build_student_dataset_no_suffix(self, processor, real_data):
+        """Test that build_student_dataset produces no _x/_y suffixed columns."""
+        logs, notes = real_data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = processor.build_student_dataset(logs, notes)
+        suffix_cols = [c for c in result.columns if c.endswith('_x') or c.endswith('_y')]
+        assert suffix_cols == [], f"Colonnes avec suffixe _x/_y trouvées: {suffix_cols}"
+
+    def test_build_student_dataset_french_columns(self, processor, real_data):
+        """Test that build_student_dataset returns French column names."""
+        logs, notes = real_data
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = processor.build_student_dataset(logs, notes)
+        # English names should NOT be present
+        english_names = ['total_actions', 'session_count', 'streak_days', 'peak_hour']
+        for name in english_names:
+            assert name not in result.columns, f"Colonne anglaise '{name}' trouvée"
+        # French names should be present
+        french_names = ['actions_totales', 'nombre_sessions', 'jours_consecutifs_max', 'heure_pointe']
+        for name in french_names:
+            assert name in result.columns, f"Colonne française '{name}' manquante"
 
     def test_cleaning_report_real_data(self, processor, real_data):
         """Test cleaning report with real data."""
@@ -971,3 +995,355 @@ class TestDataProcessorEngagementFeatures:
             # Some pandas operations on empty DataFrames may raise errors
             # This is acceptable edge case behavior
             pytest.skip("Empty DataFrame handling requires special implementation")
+
+
+class TestDeduplicateRapidEvents:
+    """Test deduplicate_rapid_events functionality."""
+
+    def test_removes_rapid_events(self, processor):
+        """Test that rapid consecutive events are removed."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:02',  # rapid (2s < 5s default)
+                '2024-07-24 09:00:10',  # not rapid (8s gap from previous kept)
+            ]),
+            'pseudo': [1, 1, 1],
+            'contexte': ['A', 'A', 'A'],
+            'composant': ['B', 'B', 'B'],
+            'evenement': ['C', 'C', 'C'],
+        })
+        result = processor.deduplicate_rapid_events(df)
+        # First event is rapid (next comes within 2s), so dropped; events 2 and 3 kept
+        assert len(result) == 2
+
+    def test_no_removal_when_all_spaced(self, processor):
+        """Test no events removed when all are spaced apart."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:01:00',
+                '2024-07-24 09:02:00',
+            ]),
+            'pseudo': [1, 1, 1],
+            'contexte': ['A', 'A', 'A'],
+            'composant': ['B', 'B', 'B'],
+            'evenement': ['C', 'C', 'C'],
+        })
+        result = processor.deduplicate_rapid_events(df)
+        assert len(result) == 3
+
+    def test_custom_threshold(self, processor):
+        """Test with a custom threshold value."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:08',  # 8s gap
+                '2024-07-24 09:00:20',  # 12s gap
+            ]),
+            'pseudo': [1, 1, 1],
+            'contexte': ['A', 'A', 'A'],
+            'composant': ['B', 'B', 'B'],
+            'evenement': ['C', 'C', 'C'],
+        })
+        # With threshold=10, first event is rapid (next comes in 8s)
+        result = processor.deduplicate_rapid_events(df, threshold_seconds=10)
+        assert len(result) == 2
+
+    def test_multiple_students_independent(self, processor):
+        """Test that deduplication is per-student."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:02',
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:01:00',
+            ]),
+            'pseudo': [1, 1, 2, 2],
+            'contexte': ['A', 'A', 'A', 'A'],
+            'composant': ['B', 'B', 'B', 'B'],
+            'evenement': ['C', 'C', 'C', 'C'],
+        })
+        result = processor.deduplicate_rapid_events(df)
+        # Student 1: first event rapid → removed. Student 2: spaced → both kept
+        assert len(result[result['pseudo'] == 1]) == 1
+        assert len(result[result['pseudo'] == 2]) == 2
+
+    def test_zero_threshold_no_removal(self, processor):
+        """Test that threshold=0 removes nothing."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:01',
+            ]),
+            'pseudo': [1, 1],
+            'contexte': ['A', 'A'],
+            'composant': ['B', 'B'],
+            'evenement': ['C', 'C'],
+        })
+        result = processor.deduplicate_rapid_events(df, threshold_seconds=0)
+        assert len(result) == 2
+
+    def test_warning_issued(self, processor):
+        """Test that a warning is issued when rapid events are removed."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:02',
+            ]),
+            'pseudo': [1, 1],
+            'contexte': ['A', 'A'],
+            'composant': ['B', 'B'],
+            'evenement': ['C', 'C'],
+        })
+        with pytest.warns(UserWarning, match='événements rapides'):
+            processor.deduplicate_rapid_events(df)
+
+    def test_cleaning_report_updated(self, processor):
+        """Test that cleaning report tracks deduplicated events."""
+        df = pd.DataFrame({
+            'heure': pd.to_datetime([
+                '2024-07-24 09:00:00',
+                '2024-07-24 09:00:02',
+                '2024-07-24 09:00:10',
+            ]),
+            'pseudo': [1, 1, 1],
+            'contexte': ['A', 'A', 'A'],
+            'composant': ['B', 'B', 'B'],
+            'evenement': ['C', 'C', 'C'],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            processor.deduplicate_rapid_events(df)
+        report = processor.get_cleaning_report()
+        assert report['events_deduplicated'] > 0
+
+
+class TestPreprocessFeatures:
+    """Test preprocess_features functionality."""
+
+    def test_fills_nan_with_zero(self, processor):
+        """Test that NaN values in feature columns are filled with 0."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2],
+            'note': [15.0, np.nan],
+            'total_actions': [10.0, np.nan],
+            'session_count': [np.nan, 5.0],
+        })
+        result = processor.preprocess_features(df)
+        assert result['total_actions'].iloc[1] == 0.0
+        assert result['session_count'].iloc[0] == 0.0
+
+    def test_preserves_note_nan(self, processor):
+        """Test that NaN in 'note' column is preserved."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2],
+            'note': [15.0, np.nan],
+            'total_actions': [10.0, 5.0],
+        })
+        result = processor.preprocess_features(df)
+        assert pd.isna(result['note'].iloc[1])
+
+    def test_preserves_pseudo(self, processor):
+        """Test that 'pseudo' column is not modified."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2],
+            'note': [15.0, 10.0],
+            'total_actions': [10.0, 5.0],
+        })
+        result = processor.preprocess_features(df)
+        assert list(result['pseudo']) == [1, 2]
+
+    def test_no_nan_warning_when_clean(self, processor):
+        """Test no warning when there are no NaN values."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'note': [15.0],
+            'total_actions': [10.0],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            processor.preprocess_features(df)
+
+    def test_warning_when_nan_filled(self, processor):
+        """Test warning is issued when NaN values are filled."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'note': [15.0],
+            'total_actions': [np.nan],
+        })
+        with pytest.warns(UserWarning, match='NaN'):
+            processor.preprocess_features(df)
+
+    def test_does_not_modify_input(self, processor):
+        """Test that input DataFrame is not modified."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'note': [15.0],
+            'total_actions': [np.nan],
+        })
+        original_val = df['total_actions'].iloc[0]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            processor.preprocess_features(df)
+        assert pd.isna(df['total_actions'].iloc[0])
+
+
+class TestRemoveOutliers:
+    """Test remove_outliers functionality."""
+
+    def test_removes_outliers_iqr(self, processor):
+        """Test that outliers are removed using IQR method."""
+        # Create data where one value is clearly an outlier
+        df = pd.DataFrame({
+            'pseudo': list(range(10)),
+            'note': [10.0] * 10,
+            'total_actions': [10, 11, 12, 10, 11, 12, 10, 11, 12, 1000],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = processor.remove_outliers(df)
+        assert len(result) < len(df)
+        assert 1000 not in result['total_actions'].values
+
+    def test_preserves_note_and_pseudo(self, processor):
+        """Test that outliers in note/pseudo do not cause removal."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2, 3, 4, 5],
+            'note': [0.0, 20.0, 10.0, 10.0, 10.0],
+            'total_actions': [10, 11, 12, 10, 11],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = processor.remove_outliers(df)
+        assert len(result) == 5
+
+    def test_custom_columns(self, processor):
+        """Test remove_outliers with specific columns."""
+        df = pd.DataFrame({
+            'pseudo': list(range(10)),
+            'note': [10.0] * 10,
+            'col_a': [10, 11, 12, 10, 11, 12, 10, 11, 12, 1000],
+            'col_b': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = processor.remove_outliers(df, columns=['col_a'])
+        assert len(result) < len(df)
+
+    def test_no_outliers_no_warning(self, processor):
+        """Test no warning when there are no outliers."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2, 3],
+            'note': [10.0, 11.0, 12.0],
+            'total_actions': [10, 11, 12],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            processor.remove_outliers(df)
+
+    def test_warning_when_outliers_removed(self, processor):
+        """Test warning is issued when outliers are removed."""
+        df = pd.DataFrame({
+            'pseudo': list(range(10)),
+            'note': [10.0] * 10,
+            'total_actions': [10, 11, 12, 10, 11, 12, 10, 11, 12, 1000],
+        })
+        with pytest.warns(UserWarning, match='outliers'):
+            processor.remove_outliers(df)
+
+    def test_cleaning_report_updated(self, processor):
+        """Test that cleaning report tracks removed outliers."""
+        df = pd.DataFrame({
+            'pseudo': list(range(10)),
+            'note': [10.0] * 10,
+            'total_actions': [10, 11, 12, 10, 11, 12, 10, 11, 12, 1000],
+        })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            processor.remove_outliers(df)
+        report = processor.get_cleaning_report()
+        assert report['outliers_removed'] > 0
+
+    def test_no_numeric_columns(self, processor):
+        """Test with no numeric columns to check."""
+        df = pd.DataFrame({
+            'pseudo': [1, 2],
+            'note': [10.0, 11.0],
+        })
+        result = processor.remove_outliers(df)
+        assert len(result) == 2
+
+
+class TestRenameFeaturestoFrench:
+    """Test rename_features_to_french functionality."""
+
+    def test_renames_known_columns(self, processor):
+        """Test that known English columns are renamed to French."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'note': [15.0],
+            'total_actions': [10],
+            'session_count': [3],
+            'streak_days': [5],
+        })
+        result = processor.rename_features_to_french(df)
+        assert 'actions_totales' in result.columns
+        assert 'nombre_sessions' in result.columns
+        assert 'jours_consecutifs_max' in result.columns
+
+    def test_preserves_pseudo_and_note(self, processor):
+        """Test that pseudo and note columns are not renamed."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'note': [15.0],
+            'total_actions': [10],
+        })
+        result = processor.rename_features_to_french(df)
+        assert 'pseudo' in result.columns
+        assert 'note' in result.columns
+
+    def test_preserves_comp_prefix(self, processor):
+        """Test that comp_ prefixed columns are not renamed."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'comp_Système': [5],
+            'comp_Fichier': [3],
+        })
+        result = processor.rename_features_to_french(df)
+        assert 'comp_Système' in result.columns
+        assert 'comp_Fichier' in result.columns
+
+    def test_unknown_columns_unchanged(self, processor):
+        """Test that unknown columns are not renamed."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'unknown_feature': [42],
+        })
+        result = processor.rename_features_to_french(df)
+        assert 'unknown_feature' in result.columns
+
+    def test_all_mappings_applied(self, processor):
+        """Test that all configured mappings are applied."""
+        from src.config import Config
+        config = Config()
+        # Build a DataFrame with all mapped English column names
+        data = {col: [1] for col in config.FEATURE_NAMES_FR.keys() if not col.startswith('comp_')}
+        data['pseudo'] = [1]
+        data['note'] = [15.0]
+        df = pd.DataFrame(data)
+        result = processor.rename_features_to_french(df)
+        for eng, fr in config.FEATURE_NAMES_FR.items():
+            if eng.startswith('comp_'):
+                continue
+            assert fr in result.columns, f"Mapping {eng} -> {fr} non appliqué"
+            assert eng not in result.columns, f"Colonne anglaise '{eng}' encore présente"
+
+    def test_does_not_modify_input(self, processor):
+        """Test that input DataFrame is not modified."""
+        df = pd.DataFrame({
+            'pseudo': [1],
+            'total_actions': [10],
+        })
+        processor.rename_features_to_french(df)
+        assert 'total_actions' in df.columns
