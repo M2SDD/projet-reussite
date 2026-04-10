@@ -55,7 +55,7 @@
   "DUPLICATE_SUBSET": null,
   "_DUPLICATE_SUBSET_description": "Colonnes à considérer pour la détection des doublons (null = toutes les colonnes)",
 
-  "RAPID_EVENT_THRESHOLD_SECONDS": 5,
+  "RAPID_EVENT_THRESHOLD_SECONDS": 1,
     "_RAPID_EVENT_THRESHOLD_SECONDS_description": "Seuil pour le dédoublement des événements rapides (miss-clicks ?)",
 
 
@@ -88,7 +88,7 @@
   },
   "_EVENEMENT_CATEGORIES_description": "Mapping des types d'événements Moodle vers des catégories d'action",
 
-  "OUTLIER_REMOVAL_ENABLED": true,
+  "OUTLIER_REMOVAL_ENABLED": false,
   "_OUTLIER_REMOVAL_ENABLED_description": "Active la suppression des outliers dans les données",
 
   "NA_FILL_STRATEGY": "zero",

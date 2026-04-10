@@ -107,7 +107,7 @@ class Config:
     DUPLICATE_SUBSET = None  # None means all columns
 
     # Paramètres de data processing
-    RAPID_EVENT_THRESHOLD_SECONDS = 5  # Seuil pour le dédoublement des événements rapides (miss-clicks ?)
+    RAPID_EVENT_THRESHOLD_SECONDS = 1  # Seuil pour le dédoublement des événements rapides (miss-clicks ?)
 
     # --- FEATURE ENGINEERING ---
 
@@ -136,7 +136,7 @@ class Config:
     # --- FEATURE SELECTION ---
 
     # Traitement des outliers et valeurs manquantes
-    OUTLIER_REMOVAL_ENABLED = True  # Activer la suppression des outliers à l'aide de l'IQR
+    OUTLIER_REMOVAL_ENABLED = False  # Activer la suppression des outliers à l'aide de l'IQR
     NA_FILL_STRATEGY = 'zero'  # Strategy for filling NaN in activity features ('zero', 'mean', 'median')
     # TODO : ajouter 'mode' ?
 
