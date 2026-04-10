@@ -134,57 +134,6 @@ if __name__ == '__main__':
     print()
 
     # --------------------------------------------------------------------------
-    # Engagement Feature Engineering
-    # --------------------------------------------------------------------------
-    print("=" * 60)
-    print("Engagement Feature Engineering")
-    print("=" * 60)
-    print()
-
-    # Build comprehensive engagement features
-    print("Computing engagement features from student activity logs...")
-    engagement_df = processor.build_engagement_features(logs_df)
-    print("Engagement features computed successfully")
-    print()
-
-    # Display engagement feature categories
-    print("Engagement Feature Categories:")
-    print("  - Activity Metrics: total_actions, unique_days_active, actions_per_day, session_count")
-    print("  - Component Features: comp_* (interactions per component)")
-    print("  - Event Type Features: *_count (views, submissions, forum, quiz, downloads)")
-    print("  - Consistency Metrics: streak_days, avg_gap_days, std_gap_days, study_frequency")
-    print("  - Interaction Depth: component_diversity, context_diversity, avg_interactions_per_component, component_switch_rate")
-    print("  - Temporal Patterns: peak_hour, morning/afternoon/evening/night_activity, weekend_activity_ratio")
-    print()
-
-    # Display engagement statistics
-    print(f"Total students with engagement features: {len(engagement_df)}")
-    print(f"Total engagement features: {len(engagement_df.columns) - 1}")  # -1 for pseudo column
-    print()
-
-    # Display sample engagement features
-    print("Sample engagement features (first 3 students):")
-    display_cols = ['pseudo', 'total_actions', 'unique_days_active', 'actions_per_day',
-                    'session_count', 'component_diversity', 'peak_hour', 'weekend_activity_ratio']
-    available_cols = [col for col in display_cols if col in engagement_df.columns]
-    print(engagement_df[available_cols].head(3))
-    print()
-
-    # Display engagement summary statistics
-    print("Engagement Metrics Summary:")
-    if 'total_actions' in engagement_df.columns:
-        print(f"  - Avg total actions: {engagement_df['total_actions'].mean():.2f}")
-    if 'unique_days_active' in engagement_df.columns:
-        print(f"  - Avg unique days active: {engagement_df['unique_days_active'].mean():.2f}")
-    if 'actions_per_day' in engagement_df.columns:
-        print(f"  - Avg actions per day: {engagement_df['actions_per_day'].mean():.2f}")
-    if 'component_diversity' in engagement_df.columns:
-        print(f"  - Avg component diversity: {engagement_df['component_diversity'].mean():.2f}")
-    if 'weekend_activity_ratio' in engagement_df.columns:
-        print(f"  - Avg weekend activity ratio: {engagement_df['weekend_activity_ratio'].mean():.2f}")
-    print()
-
-    # --------------------------------------------------------------------------
     # Statistical Analysis
     # --------------------------------------------------------------------------
     print("=" * 60)
@@ -192,10 +141,9 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Merge engagement features with student data for analysis
-    print("Merging engagement features with student grades...")
-    analysis_df = student_df.merge(engagement_df, on='pseudo', how='inner')
-    print(f"Analysis dataset created: {analysis_df.shape[0]} students, {analysis_df.shape[1]} features")
+    # Use student_df directly as analysis_df (engagement features already included by build_student_dataset)
+    analysis_df = student_df.copy()
+    print(f"Analysis dataset: {analysis_df.shape[0]} students, {analysis_df.shape[1]} features")
     print()
 
     # Compute feature correlations with target (note)
@@ -207,7 +155,7 @@ if __name__ == '__main__':
 
     # Compute descriptive statistics for all features
     print("Computing descriptive statistics for engagement features...")
-    engagement_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note', 'note_binaire']]
+    engagement_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note']]
     descriptive_stats = processor.compute_descriptive_statistics(analysis_df[engagement_cols])
     print("Descriptive statistics summary (first 5 features):")
     print(descriptive_stats.head(5))
@@ -242,11 +190,8 @@ if __name__ == '__main__':
     print()
 
     # Prepare data for feature selection (exclude target and ID columns)
-    feature_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note', 'note_binaire']]
+    feature_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note']]
     features_df = analysis_df[feature_cols + ['note']].copy()
-
-    # Fill NaN values with 0 (missing engagement features mean no activity)
-    features_df = features_df.fillna(0)
 
     print(f"Starting feature selection with {len(feature_cols)} features...")
     print()
@@ -329,9 +274,6 @@ if __name__ == '__main__':
     print("Preparing regression dataset...")
     regression_features = [col for col in best_features_df.columns]
     regression_df = analysis_df[regression_features + ['note']].copy()
-
-    # Fill NaN values
-    regression_df = regression_df.fillna(0)
 
     print(f"  - Features: {len(regression_features)}")
     print(f"  - Samples: {len(regression_df)}")
@@ -457,9 +399,6 @@ if __name__ == '__main__':
     print("Preparing regression dataset...")
     regression_features = [col for col in best_features_df.columns]
     regression_df = analysis_df[regression_features + ['note']].copy()
-
-    # Fill NaN values
-    regression_df = regression_df.fillna(0)
 
     print(f"  - Features: {len(regression_features)}")
     print(f"  - Samples: {len(regression_df)}")
