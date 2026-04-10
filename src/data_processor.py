@@ -56,6 +56,7 @@ class DataProcessor:
             'notes_duplicates_removed': 0,
             'notes_invalid_pseudo': 0,
             'notes_clipped': 0,
+            'events_deduplicated': 0,
             'students_logs_only': 0,
             'students_notes_only': 0,
             'students_merged': 0,
@@ -685,10 +686,14 @@ class DataProcessor:
 
         Appelle séquentiellement :
         1. clean_logs pour nettoyer les logs
-        2. clean_notes pour nettoyer les notes
-        3. extract_temporal_features pour enrichir les logs
-        4. build_engagement_features pour calculer les features d'engagement
-        5. Merge avec les notes
+        2. deduplicate_rapid_events pour supprimer les événements rapides
+        3. clean_notes pour nettoyer les notes
+        4. extract_temporal_features pour enrichir les logs
+        5. build_engagement_features pour calculer les features d'engagement
+        6. Merge avec les notes
+        7. preprocess_features pour remplir les NaN
+        8. remove_outliers pour supprimer les outliers (méthode IQR)
+        9. rename_features_to_french pour renommer les colonnes en français
 
         Args:
             logs_df (pd.DataFrame): DataFrame de logs brut.
@@ -701,26 +706,39 @@ class DataProcessor:
         self._cleaning_report['logs_initial_rows'] = len(logs_df)
         self._cleaning_report['notes_initial_rows'] = len(notes_df)
 
-        # Clean
+        # 1. Clean logs
         logs_clean = self.clean_logs(logs_df)
-        notes_clean = self.clean_notes(notes_df)
-
         self._cleaning_report['logs_duplicates_removed'] = (
             len(logs_df) - len(logs_clean)
         )
 
-        # Extract temporal features
+        # 2. Deduplicate rapid events
+        logs_clean = self.deduplicate_rapid_events(logs_clean)
+
+        # 3. Clean notes
+        notes_clean = self.clean_notes(notes_df)
+
+        # 4. Extract temporal features
         logs_enriched = self.extract_temporal_features(logs_clean)
 
-        # Build ALL engagement features (includes activity + component features)
+        # 5. Build ALL engagement features (includes activity + component features)
         engagement_features = self.build_engagement_features(logs_enriched)
 
-        # Merge directly with notes (don't call merge_logs_notes)
+        # 6. Merge with notes
         result = engagement_features.merge(
             notes_clean[['pseudo', 'note']],
             on='pseudo',
             how='outer'
         )
+
+        # 7. Preprocess features (fill NaN)
+        result = self.preprocess_features(result)
+
+        # 8. Remove outliers
+        result = self.remove_outliers(result)
+
+        # 9. Rename features to French
+        result = self.rename_features_to_french(result)
 
         # Update tracking for students
         logs_students = set(engagement_features['pseudo'].unique())
