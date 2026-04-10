@@ -14,7 +14,8 @@ import pytest
 import pandas as pd
 import tempfile
 import os
-from src.data_loader import DataLoader
+from src.data.data_loader import DataLoader
+from src.config import Config
 
 
 @pytest.fixture
@@ -187,14 +188,14 @@ class TestDataLoaderErrorHandling:
         with pytest.raises(FileNotFoundError) as exc_info:
             data_loader.load_logs('nonexistent_file.csv')
 
-        assert 'not found' in str(exc_info.value).lower()
+        assert 'introuvable' in str(exc_info.value).lower()
 
     def test_load_notes_missing_file(self, data_loader):
         """Test that loading a non-existent notes file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError) as exc_info:
             data_loader.load_notes('nonexistent_file.csv')
 
-        assert 'not found' in str(exc_info.value).lower()
+        assert 'introuvable' in str(exc_info.value).lower()
 
     def test_load_logs_missing_columns(self, data_loader, invalid_logs_csv):
         """Test that loading logs with missing columns raises ValueError."""
@@ -202,7 +203,7 @@ class TestDataLoaderErrorHandling:
             data_loader.load_logs(invalid_logs_csv)
 
         error_message = str(exc_info.value)
-        assert 'Missing required columns' in error_message
+        assert 'Colonnes manquantes' in error_message
         assert 'composant' in error_message or 'contexte' in error_message or 'evenement' in error_message
 
     def test_load_notes_missing_columns(self, data_loader, invalid_notes_csv):
@@ -211,12 +212,12 @@ class TestDataLoaderErrorHandling:
             data_loader.load_notes(invalid_notes_csv)
 
         error_message = str(exc_info.value)
-        assert 'Missing required columns' in error_message
+        assert 'Colonnes manquantes' in error_message
         assert 'note' in error_message
 
     def test_invalid_datetime_handling(self, data_loader, logs_with_invalid_dates):
         """Test that invalid datetime values are handled with warnings."""
-        with pytest.warns(UserWarning, match='invalid datetime'):
+        with pytest.warns(UserWarning, match='valeurs non valides'):
             df = data_loader.load_logs(logs_with_invalid_dates)
 
         # Check that invalid dates are converted to NaT
@@ -285,7 +286,7 @@ class TestDataLoaderValidation:
         })
 
         # Should not raise an error
-        data_loader._validate_columns(valid_df, DataLoader.LOGS_REQUIRED_COLUMNS, 'test file')
+        data_loader._validate_columns(valid_df, Config.LOGS_REQUIRED_COLUMNS, 'test file')
 
     def test_validate_columns_raises_on_missing(self, data_loader):
         """Test that _validate_columns raises ValueError for missing columns."""
@@ -296,10 +297,10 @@ class TestDataLoaderValidation:
         })
 
         with pytest.raises(ValueError) as exc_info:
-            data_loader._validate_columns(invalid_df, DataLoader.LOGS_REQUIRED_COLUMNS, 'test file')
+            data_loader._validate_columns(invalid_df, Config.LOGS_REQUIRED_COLUMNS, 'test file')
 
         error_message = str(exc_info.value)
-        assert 'Missing required columns' in error_message
+        assert 'Colonnes manquantes' in error_message
 
 
 class TestDataLoaderEdgeCases:
@@ -492,7 +493,7 @@ bad-date,841,Cours: PASS - S1,Système,Cours consulté"""
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 0
         # Columns should still be present
-        assert all(col in df.columns for col in DataLoader.LOGS_REQUIRED_COLUMNS)
+        assert all(col in df.columns for col in Config.LOGS_REQUIRED_COLUMNS)
 
     def test_notes_csv_headers_only(self, data_loader, notes_csv_headers_only):
         """Test loading a notes CSV with only headers and no data rows."""
@@ -502,7 +503,7 @@ bad-date,841,Cours: PASS - S1,Système,Cours consulté"""
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 0
         # Columns should still be present
-        assert all(col in df.columns for col in DataLoader.NOTES_REQUIRED_COLUMNS)
+        assert all(col in df.columns for col in Config.NOTES_REQUIRED_COLUMNS)
 
     def test_logs_csv_with_extra_columns(self, data_loader, logs_csv_with_extra_columns):
         """Test that logs CSV with extra columns still loads successfully."""
@@ -511,7 +512,7 @@ bad-date,841,Cours: PASS - S1,Système,Cours consulté"""
         assert df is not None
         assert len(df) == 2
         # Required columns should be present
-        assert all(col in df.columns for col in DataLoader.LOGS_REQUIRED_COLUMNS)
+        assert all(col in df.columns for col in Config.LOGS_REQUIRED_COLUMNS)
         # Extra columns should also be present
         assert 'extra_col1' in df.columns
         assert 'extra_col2' in df.columns
@@ -523,7 +524,7 @@ bad-date,841,Cours: PASS - S1,Système,Cours consulté"""
         assert df is not None
         assert len(df) == 2
         # Required columns should be present
-        assert all(col in df.columns for col in DataLoader.NOTES_REQUIRED_COLUMNS)
+        assert all(col in df.columns for col in Config.NOTES_REQUIRED_COLUMNS)
         # Extra column should also be present
         assert 'extra_column' in df.columns
 
@@ -562,7 +563,7 @@ bad-date,841,Cours: PASS - S1,Système,Cours consulté"""
 
     def test_logs_csv_all_invalid_dates(self, data_loader, logs_csv_all_invalid_dates):
         """Test handling when all datetime values are invalid."""
-        with pytest.warns(UserWarning, match='invalid datetime'):
+        with pytest.warns(UserWarning, match='valeurs non valides'):
             df = data_loader.load_logs(logs_csv_all_invalid_dates)
 
         assert df is not None

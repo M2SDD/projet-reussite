@@ -55,8 +55,12 @@
   "DUPLICATE_SUBSET": null,
   "_DUPLICATE_SUBSET_description": "Colonnes à considérer pour la détection des doublons (null = toutes les colonnes)",
 
-  "RAPID_EVENT_THRESHOLD_SECONDS": 1,
-    "_RAPID_EVENT_THRESHOLD_SECONDS_description": "Seuil pour le dédoublement des événements rapides (miss-clicks ?)",
+
+  "RAPID_EVENT_THRESHOLD_ENABLED": false,
+  "_RAPID_EVENT_THRESHOLD_ENABLED_description": "Active le dédoublement des événements rapides (miss-clicks ?)",
+
+  "RAPID_EVENT_THRESHOLD_SECONDS": 2,
+  "_RAPID_EVENT_THRESHOLD_SECONDS_description": "Seuil pour le dédoublement des événements rapides (miss-clicks ?)",
 
 
   "FEATURE_HOUR_OF_DAY": true,

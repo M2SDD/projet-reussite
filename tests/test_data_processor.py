@@ -18,6 +18,8 @@ import pytest
 import pandas as pd
 import numpy as np
 import warnings
+
+from src import Config
 from src.data_processor import DataProcessor
 
 
@@ -487,7 +489,7 @@ class TestDataProcessorRealFiles:
     @pytest.fixture
     def real_data(self):
         """Load real data files using DataLoader."""
-        from src.data_loader import DataLoader
+        from src.data.data_loader import DataLoader
         loader = DataLoader()
         logs = loader.load_logs('data/logs_info_25_pseudo.csv')
         notes = loader.load_notes('data/notes_info_25_pseudo.csv')
@@ -1005,7 +1007,7 @@ class TestDeduplicateRapidEvents:
         df = pd.DataFrame({
             'heure': pd.to_datetime([
                 '2024-07-24 09:00:00',
-                '2024-07-24 09:00:02',  # rapid (2s < 5s default)
+                '2024-07-24 09:00:01',  # rapid (1s < 2s default)
                 '2024-07-24 09:00:10',  # not rapid (8s gap from previous kept)
             ]),
             'pseudo': [1, 1, 1],
@@ -1055,7 +1057,7 @@ class TestDeduplicateRapidEvents:
         df = pd.DataFrame({
             'heure': pd.to_datetime([
                 '2024-07-24 09:00:00',
-                '2024-07-24 09:00:02',
+                '2024-07-24 09:00:01',
                 '2024-07-24 09:00:00',
                 '2024-07-24 09:01:00',
             ]),
@@ -1089,7 +1091,7 @@ class TestDeduplicateRapidEvents:
         df = pd.DataFrame({
             'heure': pd.to_datetime([
                 '2024-07-24 09:00:00',
-                '2024-07-24 09:00:02',
+                '2024-07-24 09:00:01',
             ]),
             'pseudo': [1, 1],
             'contexte': ['A', 'A'],
@@ -1104,7 +1106,7 @@ class TestDeduplicateRapidEvents:
         df = pd.DataFrame({
             'heure': pd.to_datetime([
                 '2024-07-24 09:00:00',
-                '2024-07-24 09:00:02',
+                '2024-07-24 09:00:01',
                 '2024-07-24 09:00:10',
             ]),
             'pseudo': [1, 1, 1],

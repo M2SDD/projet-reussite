@@ -22,7 +22,7 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 from .config import Config
 
-from .data_loader import DataLoader
+from .data.data_loader import DataLoader
 from .data_processor import DataProcessor
 
 # models
@@ -35,7 +35,6 @@ from .evaluation.model_evaluator import ModelEvaluator
 # visualisation
 from .visualization.model_visualizer import ModelVisualizer
 from .statistics_module import StatisticsModule
-from .visualizer import Visualizer
 
 __all__ = [
     'Config',
@@ -46,5 +45,4 @@ __all__ = [
     'ModelEvaluator',
     'ModelVisualizer',
     'StatisticsModule',
-    'Visualizer',
 ]
