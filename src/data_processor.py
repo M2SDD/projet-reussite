@@ -1318,6 +1318,34 @@ class DataProcessor:
 
         return df_clean
 
+    def rename_features_to_french(self, df):
+        """
+        Renomme les colonnes de features anglaises en français.
+
+        Utilise Config.FEATURE_NAMES_FR pour le mapping. Gère le préfixe 'comp_'
+        (les noms de composants sont déjà en français dans les données).
+        Les colonnes 'pseudo' et 'note' ne sont pas renommées.
+
+        Args:
+            df (pd.DataFrame): Le DataFrame avec des colonnes en anglais.
+
+        Returns:
+            pd.DataFrame: Le DataFrame avec les colonnes renommées en français.
+        """
+        rename_map = {}
+        feature_names_fr = self.config.FEATURE_NAMES_FR
+
+        for col in df.columns:
+            if col in ('pseudo', 'note'):
+                continue
+            if col.startswith('comp_'):
+                # Les noms de composants sont déjà en français, on garde le préfixe
+                continue
+            if col in feature_names_fr:
+                rename_map[col] = feature_names_fr[col]
+
+        return df.rename(columns=rename_map)
+
     def process_data(self, data):
         """
         Traite et transforme les données brutes.
