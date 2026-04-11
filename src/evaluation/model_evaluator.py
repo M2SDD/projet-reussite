@@ -296,7 +296,7 @@ class ModelEvaluator:
         best_rmse = np.inf
 
         for model_name, metrics in all_metrics.items():
-            r2 = getattr(metrics, 'adjusted_r2', metrics['r2'])
+            r2 = metrics.get('adjusted_r2', metrics['r2'])
 
             rmse = metrics['rmse']
 
@@ -319,7 +319,7 @@ class ModelEvaluator:
         # Si plusieurs modèles ont le même R² ajusté, mentionner le RMSE
         models_with_same_r2 = [
             name for name, m in all_metrics.items()
-            if getattr(m, 'adjusted_r2', m['r2']) == best_r2
+            if m.get('adjusted_r2', m['r2']) == best_r2
         ]
         if len(models_with_same_r2) > 1:
             reason += f" avec le RMSE le plus faible ({best_rmse:.4f})"
