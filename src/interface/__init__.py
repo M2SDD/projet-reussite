@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------------------------------------------------
 # Created By  : Matthieu PELINGRE
-# Created Date: 08/03/2025
+# Created Date: 11/04/2025
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-DataVis sur les exports d'Arche anonymisés
+Sous-package pour les classes de la GUI Tkinter
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -20,15 +20,10 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
+from .app_controller import AppController
+from .main_window import MainWindow
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    import tkinter as tk
-    from src.interface.main_window import MainWindow
-
-    root = tk.Tk()
-    app = MainWindow(root)
-    root.mainloop()
+__all__ = [
+    'AppController',
+    'MainWindow',
+]
