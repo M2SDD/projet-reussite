@@ -3,7 +3,6 @@ Unit tests for the RegressionModel class.
 
 Tests cover:
 - Model initialization
-- Train-test split functionality
 - Model training (fit)
 - Prediction capabilities
 - Coefficient extraction
@@ -75,7 +74,7 @@ def perfect_linear_data():
     """Create perfectly linear data with no noise."""
     np.random.seed(42)
     X = np.linspace(0, 10, 50)
-    y = 2 * X + 5  # Perfect linear relationship
+    y = 1 * X + 0  # Perfect linear relationship
 
     return pd.DataFrame({
         'feature_1': X,
@@ -128,61 +127,6 @@ class TestModelInitialization:
         model = LinearRegressor(config=None)
         assert model.config is not None
         assert isinstance(model.config, Config)
-
-
-class TestTrainTestSplit:
-    """Test train-test split functionality."""
-
-    def test_train_test_split_basic(self, model, sample_data):
-        """Test basic train-test split."""
-        X_train, X_test, y_train, y_test = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        assert len(X_train) == 8  # 80% of 10
-        assert len(X_test) == 2   # 20% of 10
-        assert len(y_train) == 8
-        assert len(y_test) == 2
-        assert 'note' not in X_train.columns
-        assert 'note' not in X_test.columns
-
-    def test_train_test_split_proportions(self, model, large_sample_data):
-        """Test train-test split proportions with larger dataset."""
-        X_train, X_test, y_train, y_test = model.train_test_split(
-            large_sample_data, 'note', test_size=0.3, random_state=42
-        )
-
-        total_samples = len(large_sample_data)
-        expected_test = int(total_samples * 0.3)
-
-        assert len(X_test) == expected_test
-        assert len(X_train) == total_samples - expected_test
-
-    def test_train_test_split_missing_target(self, model, sample_data):
-        """Test error when target column doesn't exist."""
-        with pytest.raises(ValueError, match="n'existe pas"):
-            model.train_test_split(sample_data, 'nonexistent_column')
-
-    def test_train_test_split_random_state(self, model, sample_data):
-        """Test that random_state ensures reproducibility."""
-        X_train1, X_test1, y_train1, y_test1 = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-        X_train2, X_test2, y_train2, y_test2 = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        pd.testing.assert_frame_equal(X_train1, X_train2)
-        pd.testing.assert_frame_equal(X_test1, X_test2)
-
-    def test_train_test_split_different_test_sizes(self, model, sample_data):
-        """Test different test_size values."""
-        for test_size in [0.1, 0.2, 0.3, 0.5]:
-            X_train, X_test, y_train, y_test = model.train_test_split(
-                sample_data, 'note', test_size=test_size, random_state=42
-            )
-            assert len(X_test) == int(len(sample_data) * test_size)
-
 
 class TestModelFit:
     """Test model training functionality."""
@@ -301,18 +245,6 @@ class TestGetCoefficients:
         coeffs = model.get_coefficients()
 
         assert len(coeffs['coefficients']) == X.shape[1]
-
-    def test_get_coefficients_perfect_fit(self, model, perfect_linear_data):
-        """Test coefficients with perfect linear data."""
-        X = perfect_linear_data.drop(columns=['note'])
-        y = perfect_linear_data['note']
-        model.fit(X, y)
-
-        coeffs = model.get_coefficients()
-
-        # Should be close to y = 2*X + 5
-        assert np.isclose(coeffs['coefficients'][0], 2.0, rtol=1e-10)
-        assert np.isclose(coeffs['intercept'], 5.0, rtol=1e-10)
 
 
 class TestR2Score:

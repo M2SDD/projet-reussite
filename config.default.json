@@ -78,20 +78,6 @@
   "SESSION_GAP_MINUTES": 30,
   "_SESSION_GAP_MINUTES_description": "Intervalle de temps (en minutes) pour définir une nouvelle session",
 
-  "FEATURE_EVENT_TYPES": ["consultation", "depot", "forum"],
-  "_FEATURE_EVENT_TYPES_description": "Types d'événements à suivre pour l'analyse d'engagement",
-
-  "EVENEMENT_CATEGORIES": {
-    "Cours consulté": "consultation",
-    "Module de cours consulté": "consultation",
-    "Activité de devoir consultée": "consultation",
-    "Un fichier a été déposé.": "depot",
-    "Une tentative a été soumise.": "depot",
-    "Discussion consultée": "forum",
-    "Message créé": "forum"
-  },
-  "_EVENEMENT_CATEGORIES_description": "Mapping des types d'événements Moodle vers des catégories d'action",
-
   "OUTLIER_REMOVAL_ENABLED": false,
   "_OUTLIER_REMOVAL_ENABLED_description": "Active la suppression des outliers dans les données",
 

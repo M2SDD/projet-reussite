@@ -382,7 +382,7 @@ class DataProcessor:
             event_lower = event.lower()
 
             # View/consultation events
-            if any(keyword in event_lower for keyword in ['consulté', 'vue', 'affich', 'viewed', 'view']):
+            if any(keyword in event_lower for keyword in ['consulté', 'vue', 'affich']):
                 return 'view'
             # Submission events
             elif any(keyword in event_lower for keyword in ['déposé', 'soumis', 'submit', 'upload', 'envoyé']):

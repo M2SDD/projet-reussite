@@ -22,7 +22,13 @@ __status__ = "Production"
 # ----------------------------------------------------------------------------------------------------------------------
 from .config import Config
 
+# data
 from .data.data_loader import DataLoader
+from .data.feature_extractor import FeatureExtractor
+from .data.data_cleaner import DataCleaner
+from .data.dataset_builder import DatasetBuilder
+from .data.statistics_module import StatisticsModule
+
 from .data_processor import DataProcessor
 
 # models
@@ -34,11 +40,13 @@ from .evaluation.model_evaluator import ModelEvaluator
 
 # visualisation
 from .visualization.model_visualizer import ModelVisualizer
-from .statistics_module import StatisticsModule
 
 __all__ = [
     'Config',
     'DataLoader',
+    'FeatureExtractor',
+    'DataCleaner',
+    'DatasetBuilder',
     'DataProcessor',
     'EnsembleRegressor',
     'LinearRegressor',

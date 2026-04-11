@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 """
 Module définissant la classe de base abstraite pour les modèles de prédiction.
+NB. la classe contient le scaler pour la standardisation des données.
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -25,9 +26,8 @@ from typing import Dict, Tuple, Any, Optional, Union
 import warnings
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import stats
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.exceptions import NotFittedError
 
@@ -45,33 +45,14 @@ class BaseRegressor(ABC):
     def __init__(self, config: Optional[Config] = None):
         self.config = config if config is not None else Config()
         self.model = None
-
-    # TODO : à refactoriser dans le DataProcessor
-    # également voir si on utilise la config ici ou plus tard.
-    def train_test_split(self, df: pd.DataFrame, target_column: str,
-                         random_state: Optional[int] = None, test_size: Optional[float] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-        """Divise les données en ensembles d'entraînement et de test."""
-        if target_column not in df.columns:
-            raise ValueError(
-                f"La colonne cible '{target_column}' n'existe pas dans le DataFrame. "
-                f"Colonnes disponibles: {list(df.columns)}"
-            )
-
-        X = df.drop(columns=[target_column])
-        y = df[target_column]
-
-        if test_size is None:
-            test_size = getattr(self.config, 'TEST_SPLIT_RATIO', 0.2)
-        if random_state is None:
-            random_state = getattr(self.config, 'RANDOM_STATE', 42)
-
-        return train_test_split(X, y, test_size=test_size, random_state=random_state)
+        self.scaler = RobustScaler()  # beaucoup de disparités entre les actions et donc "d'outliers dans les données"
 
     def fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> 'BaseRegressor':
         """
         Valide les données puis entraîne le modèle (Design Pattern : Template Method).
         """
         self._validate_input_data(X, y)
+        X = self.scaler.fit_transform(X)  # Entrainement du scaler sur les données d'entraînement
         self._fit(X, y)
         return self
 
@@ -87,6 +68,9 @@ class BaseRegressor(ABC):
         self._check_is_fitted()
         if X is None or (hasattr(X, '__len__') and len(X) == 0):
             raise ValueError("X ne peut pas être vide.")
+
+        # Scaling des données avant prédiction
+        X = self.scaler.transform(X)
 
         return self.model.predict(X)
 

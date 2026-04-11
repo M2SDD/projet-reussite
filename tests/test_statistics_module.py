@@ -13,8 +13,7 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-import warnings
-from src.statistics_module import StatisticsModule
+from src.data.statistics_module import StatisticsModule
 
 
 @pytest.fixture

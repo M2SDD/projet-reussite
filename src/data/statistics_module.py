@@ -23,7 +23,7 @@ __status__ = "Production"
 import pandas as pd
 import numpy as np
 
-from .config import Config
+from ..config import Config
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -113,12 +113,6 @@ class StatisticsModule:
     def calculate_basic_stats(self, data):
         """
         Calcule les statistiques descriptives de base.
-
-        Args:
-            data (pd.Series ou pd.DataFrame): Les données à analyser.
-
-        Returns:
-            dict: Dictionnaire contenant les statistiques calculées.
         """
         if isinstance(data, pd.DataFrame):
             data = data.select_dtypes(include=[np.number])
@@ -128,12 +122,6 @@ class StatisticsModule:
     def calculate_central_tendency(self, data):
         """
         Calcule les mesures de tendance centrale (moyenne, médiane, mode).
-
-        Args:
-            data (pd.Series): Les données à analyser.
-
-        Returns:
-            dict: Dictionnaire avec mean, median, mode.
         """
         result = {
             'mean': float(data.mean()),
@@ -146,12 +134,6 @@ class StatisticsModule:
     def calculate_dispersion(self, data):
         """
         Calcule les mesures de dispersion (variance, écart-type, étendue).
-
-        Args:
-            data (pd.Series): Les données à analyser.
-
-        Returns:
-            dict: Dictionnaire avec variance, std, range, etc.
         """
         q1 = float(data.quantile(0.25))
         q3 = float(data.quantile(0.75))
@@ -165,12 +147,6 @@ class StatisticsModule:
     def calculate_distribution(self, data):
         """
         Calcule les mesures de distribution (asymétrie, aplatissement).
-
-        Args:
-            data (pd.Series): Les données à analyser.
-
-        Returns:
-            dict: Dictionnaire avec skewness, kurtosis.
         """
         return {
             'skewness': float(data.skew()),
@@ -180,13 +156,6 @@ class StatisticsModule:
     def calculate_quantiles(self, data, quantiles=None):
         """
         Calcule les quantiles des données.
-
-        Args:
-            data (pd.Series): Les données à analyser.
-            quantiles (list): Liste des quantiles à calculer (par défaut [0.25, 0.5, 0.75]).
-
-        Returns:
-            dict: Dictionnaire avec les quantiles calculés.
         """
         if quantiles is None:
             quantiles = [0.25, 0.5, 0.75]

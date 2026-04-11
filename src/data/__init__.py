@@ -6,7 +6,7 @@
 # version ='1.0'
 # ----------------------------------------------------------------------------------------------------------------------
 """
-Sous-package pour la gestion des modèles de machine learning.
+Sous-package pour la gestion des données.
 
 __author__ = "Matthieu PELINGRE"
 __copyright__ = "Informations de droits d'auteur"
@@ -21,7 +21,14 @@ __status__ = "Production"
 # Imports
 # ----------------------------------------------------------------------------------------------------------------------
 from .data_loader import DataLoader
+from .feature_extractor import FeatureExtractor
+from .data_cleaner import DataCleaner
+from .dataset_builder import DatasetBuilder
+from .statistics_module import StatisticsModule
 
 __all__ = [
     'DataLoader',
+    'FeatureExtractor',
+    'DataCleaner',
+    'StatisticsModule',
 ]
