@@ -9,16 +9,17 @@ Ne contient que des opérations purement mathématiques/statistiques.
 import numpy as np
 import pandas as pd
 import warnings
-from typing import Tuple, List, Optional
-from sklearn.feature_selection import SelectKBest, f_regression
+from typing import Tuple, List, Optional, Union
+from sklearn.feature_selection import SelectKBest, f_regression, VarianceThreshold, mutual_info_regression, RFE
+from sklearn.ensemble import RandomForestRegressor
 
 from ..config import Config
 
 
 class DataCleaner:
     """
-    Classe responsable de l'élimination des valeurs aberrantes (outliers)
-    et de la sélection des variables les plus pertinentes.
+    Classe responsable de l'élimination des valeurs aberrantes (outliers),
+    du nettoyage des variables redondantes, et de la sélection des variables les plus pertinentes.
     """
 
     def __init__(self, config: Optional[Config] = None):
@@ -29,15 +30,6 @@ class DataCleaner:
         """
         Supprime les valeurs aberrantes de X et y en utilisant la méthode
         de l'écart interquartile (IQR).
-
-        Args:
-            X (pd.DataFrame): Les features.
-            y (pd.Series): La variable cible.
-            threshold (float): Multiplicateur de l'IQR (défaut: 1.5).
-                               Un seuil plus élevé rend le filtre moins strict.
-
-        Returns:
-            Tuple[pd.DataFrame, pd.Series]: X et y nettoyés.
         """
         if len(X) != len(y):
             raise ValueError("X et y doivent avoir la même taille.")
@@ -69,18 +61,52 @@ class DataCleaner:
 
         return X_clean, y_clean
 
-    def select_top_features(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[pd.DataFrame, List[str]]:
+    def remove_low_variance_features(self, X: pd.DataFrame, threshold: float = 0.01) -> pd.DataFrame:
+        """
+        Supprime les features dont la variance est quasi nulle (qui ont presque toujours la même valeur).
+        Ex: Un composant ARCHE que personne n'utilise jamais.
+        """
+        selector = VarianceThreshold(threshold=threshold)
+        selector.fit(X)
+
+        features_to_keep = X.columns[selector.get_support()]
+
+        removed_features = set(X.columns) - set(features_to_keep)
+        if removed_features:
+            warnings.warn(
+                f"{len(removed_features)} variables à faible variance supprimées : {list(removed_features)}",
+                UserWarning
+            )
+
+        return X[features_to_keep]
+
+    def remove_highly_correlated_features(self, X: pd.DataFrame, threshold: float = 0.85) -> pd.DataFrame:
+        """
+        Supprime les features fortement corrélées entre elles (colinéarité) pour éviter
+        de donner des informations redondantes au modèle.
+        """
+        # Calculer la matrice de corrélation absolue
+        corr_matrix = X.corr().abs()
+
+        # Sélectionner le triangle supérieur de la matrice de corrélation
+        upper_mask = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+        upper = corr_matrix.where(upper_mask)
+
+        # Trouver les features avec une corrélation supérieure au seuil
+        to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
+
+        if to_drop:
+            warnings.warn(
+                f"{len(to_drop)} variables fortement corrélées (>{threshold}) supprimées : {to_drop}",
+                UserWarning
+            )
+
+        return X.drop(columns=to_drop)
+
+    def select_top_features_linear(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[pd.DataFrame, List[str]]:
         """
         Sélectionne les 'k' meilleures features en fonction de leur corrélation
-        linéaire avec la cible (f_regression).
-
-        Args:
-            X (pd.DataFrame): Les features.
-            y (pd.Series): La variable cible.
-            k (int): Le nombre de features à conserver.
-
-        Returns:
-            Tuple[pd.DataFrame, List[str]]: Le DataFrame filtré et la liste des features sélectionnées.
+        linéaire avec la cible (test F). Idéal pour la Régression Linéaire.
         """
         n_features = X.shape[1]
         k = min(k, n_features)
@@ -89,17 +115,152 @@ class DataCleaner:
             raise ValueError("Le nombre de features k doit être supérieur à 0.")
 
         selector = SelectKBest(score_func=f_regression, k=k)
-        X_selected_array = selector.fit_transform(X, y)
+        selector.fit(X, y)
 
-        # Récupérer les noms des colonnes sélectionnées
         selected_mask = selector.get_support()
         selected_features = X.columns[selected_mask].tolist()
 
-        # Reconstruire un DataFrame propre avec les colonnes sélectionnées
-        X_selected = pd.DataFrame(
-            X_selected_array,
-            columns=selected_features,
-            index=X.index
+        X_selected = X.loc[:, selected_features]
+        return X_selected, selected_features
+
+    def select_top_features_mutual_info(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[
+        pd.DataFrame, List[str]]:
+        """
+        Sélectionne les 'k' meilleures features en utilisant l'Information Mutuelle.
+        Capture n'importe quelle relation (linéaire ou non-linéaire) de manière univariée.
+        """
+        n_features = X.shape[1]
+        k = min(k, n_features)
+
+        if k <= 0:
+            raise ValueError("Le nombre de features k doit être supérieur à 0.")
+
+        # L'utilisation d'un lambda permet de passer le random_state pour garantir la reproductibilité
+        random_state = getattr(self.config, 'RANDOM_STATE', 42)
+        score_func = lambda X, y: mutual_info_regression(X, y, random_state=random_state, n_jobs=-1)
+
+        selector = SelectKBest(score_func=score_func, k=k)
+        selector.fit(X, y)
+
+        selected_mask = selector.get_support()
+        selected_features = X.columns[selected_mask].tolist()
+
+        X_selected = X.loc[:, selected_features]
+        return X_selected, selected_features
+
+    def select_features_by_importance(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[
+        pd.DataFrame, List[str]]:
+        """
+        Sélectionne les 'k' meilleures features en utilisant l'importance des variables
+        dérivée d'un Random Forest. Capture très bien les relations non linéaires avec interactions.
+        Idéal pour les modèles ensemblistes.
+        """
+        n_features = X.shape[1]
+        k = min(k, n_features)
+
+        if k <= 0:
+            raise ValueError("Le nombre de features k doit être supérieur à 0.")
+
+        # Utiliser un Random Forest pour évaluer l'importance
+        rf = RandomForestRegressor(
+            n_estimators=100,
+            random_state=getattr(self.config, 'RANDOM_STATE', 42),
+            n_jobs=-1
+        )
+        rf.fit(X, y)
+
+        # Créer un DataFrame avec les importances et trier
+        importances = pd.DataFrame({
+            'feature': X.columns,
+            'importance': rf.feature_importances_
+        }).sort_values('importance', ascending=False)
+
+        # Garder le top K
+        selected_features = importances['feature'].head(k).tolist()
+
+        return X[selected_features], selected_features
+
+    def select_features_rfe(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Sélectionne les 'k' meilleures features en utilisant l'Élimination Récursive
+        (Recursive Feature Elimination - RFE) avec un Random Forest.
+        Plus lent que l'importance simple, mais potentiellement plus robuste.
+        """
+        n_features = X.shape[1]
+        k = min(k, n_features)
+
+        if k <= 0:
+            raise ValueError("Le nombre de features k doit être supérieur à 0.")
+
+        estimator = RandomForestRegressor(
+            n_estimators=50,  # On réduit un peu n_estimators pour accélérer RFE
+            random_state=getattr(self.config, 'RANDOM_STATE', 42),
+            n_jobs=-1
         )
 
+        selector = RFE(estimator=estimator, n_features_to_select=k, step=1)
+        selector.fit(X, y)
+
+        selected_mask = selector.get_support()
+        selected_features = X.columns[selected_mask].tolist()
+
+        X_selected = X.loc[:, selected_features]
         return X_selected, selected_features
+
+    def select_features(self, X: pd.DataFrame, y: pd.Series,
+                        methods: Union[str, List[str]] = ['linear', 'mutual_info', 'rfe'],
+                        k: int = 10,
+                        prefilter_variance: bool = True,
+                        prefilter_correlation: bool = True) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Méthode routeur globale pour la sélection de features, incluant le pré-nettoyage.
+        Permet de combiner plusieurs méthodes (Ensemble Feature Selection).
+
+        Args:
+            X (pd.DataFrame): Les features brutes.
+            y (pd.Series): La variable cible.
+            methods (str ou List[str]): 'linear', 'mutual_info', 'importance', ou 'rfe'.
+            k (int): Le nombre de features à conserver PAR méthode.
+            prefilter_variance (bool): Appliquer le filtre de faible variance avant la sélection.
+            prefilter_correlation (bool): Appliquer le filtre de colinéarité avant la sélection.
+
+        Returns:
+            Tuple[pd.DataFrame, List[str]]: Le DataFrame filtré final et la liste des features sélectionnées.
+        """
+        # 1. Pré-filtrage (Nettoyage de base)
+        if prefilter_variance:
+            X = self.remove_low_variance_features(X)
+
+        if prefilter_correlation:
+            X = self.remove_highly_correlated_features(X)
+
+        # 2. Sélection avancée
+        valid_methods = {
+            'linear': self.select_top_features_linear,
+            'mutual_info': self.select_top_features_mutual_info,
+            'importance': self.select_features_by_importance,
+            'rfe': self.select_features_rfe
+        }
+
+        # Conversion en liste si une seule méthode est passée en string
+        if isinstance(methods, str):
+            methods = [methods]
+
+        all_selected_features = set()
+
+        # Application de l'Ensemble Feature Selection (Union des ensembles de k features)
+        for method in methods:
+            if method not in valid_methods:
+                raise ValueError(
+                    f"Méthode de sélection inconnue : '{method}'. "
+                    f"Méthodes valides : {list(valid_methods.keys())}"
+                )
+
+            # Extraire les k features pour cette méthode spécifique
+            _, selected_for_method = valid_methods[method](X, y, k=k)
+            all_selected_features.update(selected_for_method)
+
+        # Reconvertir le set en liste triée (pour assurer la reproductibilité de l'ordre)
+        final_features = sorted(list(all_selected_features))
+
+        return X[final_features], final_features

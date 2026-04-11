@@ -101,6 +101,7 @@ class Config:
     # Seuils d'évaluation des risques
     RISK_THRESHOLD_HIGH = 10  # Une note inférieure à celle-ci indique un risque élevé
     RISK_THRESHOLD_MEDIUM = 12  # Une note inférieure à celle-ci indique un risque moyen
+    # NB. moyenne des notes à 10.00 et médiane à 9.86
 
     # Duplicate removal settings
     DUPLICATE_KEEP = 'first'
