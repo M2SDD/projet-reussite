@@ -30,5 +30,6 @@ __all__ = [
     'DataLoader',
     'FeatureExtractor',
     'DataCleaner',
+    'DatasetBuilder',
     'StatisticsModule',
 ]
