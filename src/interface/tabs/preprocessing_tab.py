@@ -56,7 +56,7 @@ class PreprocessingTab:
         # Ligne 0 – options booléennes globales
         self._drop_inactive   = tk.BooleanVar(value=True)
         self._remove_outliers = tk.BooleanVar(value=False)
-        ttk.Checkbutton(opt_frame, text='Supprimer les étudiants inactifs (inner join)',
+        ttk.Checkbutton(opt_frame, text='Supprimer les étudiants inactifs',
                         variable=self._drop_inactive).grid(row=0, column=0, sticky='w', padx=8, pady=4)
         ttk.Checkbutton(opt_frame, text='Supprimer les outliers (méthode IQR)',
                         variable=self._remove_outliers).grid(row=0, column=1, sticky='w', padx=8, pady=4)
@@ -73,13 +73,13 @@ class PreprocessingTab:
         self._method_importance = tk.BooleanVar(value=False)
         self._method_rfe        = tk.BooleanVar(value=False)
 
-        ttk.Checkbutton(methods_frame, text='linear',
+        ttk.Checkbutton(methods_frame, text='Régression linéaire univariée',
                         variable=self._method_linear).pack(side=tk.LEFT, padx=4)
-        ttk.Checkbutton(methods_frame, text='mutual_info',
+        ttk.Checkbutton(methods_frame, text='Information Mutuelle',
                         variable=self._method_mutual).pack(side=tk.LEFT, padx=4)
-        ttk.Checkbutton(methods_frame, text='importance',
+        ttk.Checkbutton(methods_frame, text='Feature Importance',
                         variable=self._method_importance).pack(side=tk.LEFT, padx=4)
-        ttk.Checkbutton(methods_frame, text='rfe  (lent)',
+        ttk.Checkbutton(methods_frame, text='Recursive Feature Elimination  (lent)',
                         variable=self._method_rfe).pack(side=tk.LEFT, padx=4)
 
         # Ligne 2 – k features + pré-filtres
