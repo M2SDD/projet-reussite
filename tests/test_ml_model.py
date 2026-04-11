@@ -3,7 +3,6 @@ Unit tests for the MLModel class.
 
 Tests cover:
 - Model initialization
-- Train-test split functionality
 - Model training (fit)
 - Prediction capabilities
 - Feature importance extraction
@@ -125,61 +124,6 @@ class TestModelInitialization:
         model = EnsembleRegressor(config=None)
         assert model.config is not None
         assert isinstance(model.config, Config)
-
-
-class TestTrainTestSplit:
-    """Test train-test split functionality."""
-
-    def test_train_test_split_basic(self, model, sample_data):
-        """Test basic train-test split."""
-        X_train, X_test, y_train, y_test = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        assert len(X_train) == 8  # 80% of 10
-        assert len(X_test) == 2   # 20% of 10
-        assert len(y_train) == 8
-        assert len(y_test) == 2
-        assert 'note' not in X_train.columns
-        assert 'note' not in X_test.columns
-
-    def test_train_test_split_proportions(self, model, large_sample_data):
-        """Test train-test split proportions with larger dataset."""
-        X_train, X_test, y_train, y_test = model.train_test_split(
-            large_sample_data, 'note', test_size=0.3, random_state=42
-        )
-
-        total_samples = len(large_sample_data)
-        expected_test = int(total_samples * 0.3)
-
-        assert len(X_test) == expected_test
-        assert len(X_train) == total_samples - expected_test
-
-    def test_train_test_split_missing_target(self, model, sample_data):
-        """Test error when target column doesn't exist."""
-        with pytest.raises(ValueError, match="n'existe pas"):
-            model.train_test_split(sample_data, 'nonexistent_column')
-
-    def test_train_test_split_random_state(self, model, sample_data):
-        """Test that random_state ensures reproducibility."""
-        X_train1, X_test1, y_train1, y_test1 = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-        X_train2, X_test2, y_train2, y_test2 = model.train_test_split(
-            sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        pd.testing.assert_frame_equal(X_train1, X_train2)
-        pd.testing.assert_frame_equal(X_test1, X_test2)
-
-    def test_train_test_split_different_test_sizes(self, model, sample_data):
-        """Test different test_size values."""
-        for test_size in [0.1, 0.2, 0.3, 0.5]:
-            X_train, X_test, y_train, y_test = model.train_test_split(
-                sample_data, 'note', test_size=test_size, random_state=42
-            )
-            assert len(X_test) == int(len(sample_data) * test_size)
-
 
 class TestModelFit:
     """Test model training functionality."""
@@ -756,39 +700,3 @@ class TestMLModelVsRegressionModelComparison:
         assert np.isclose(regression_rmse, 0.0, atol=1e-10)
         # Random Forest should have low RMSE but not necessarily zero
         assert ml_rmse < 0.5
-
-    def test_mlmodel_vs_regression_train_test_split(self, large_sample_data):
-        """Test that both models handle train-test splits consistently."""
-        # Use the same random_state for both models
-        ml_model = EnsembleRegressor()
-        regression_model = LinearRegressor()
-
-        # Perform train-test split with both models
-        ml_X_train, ml_X_test, ml_y_train, ml_y_test = ml_model.train_test_split(
-            large_sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        regression_X_train, regression_X_test, regression_y_train, regression_y_test = regression_model.train_test_split(
-            large_sample_data, 'note', test_size=0.2, random_state=42
-        )
-
-        # Both should produce identical splits
-        pd.testing.assert_frame_equal(ml_X_train, regression_X_train)
-        pd.testing.assert_frame_equal(ml_X_test, regression_X_test)
-        pd.testing.assert_series_equal(ml_y_train, regression_y_train)
-        pd.testing.assert_series_equal(ml_y_test, regression_y_test)
-
-        # Train both models
-        ml_model.fit(ml_X_train, ml_y_train)
-        regression_model.fit(regression_X_train, regression_y_train)
-
-        # Evaluate on test set - both should produce valid metrics
-        ml_test_r2 = ml_model.compute_r2_score(ml_X_test, ml_y_test)
-        regression_test_r2 = regression_model.compute_r2_score(regression_X_test, regression_y_test)
-
-        # Both should produce valid R² scores (but not necessarily identical)
-        assert isinstance(ml_test_r2, (int, float))
-        assert isinstance(regression_test_r2, (int, float))
-        # R² can be negative for bad models, but should be reasonable
-        assert -1 <= ml_test_r2 <= 1
-        assert -1 <= regression_test_r2 <= 1

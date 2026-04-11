@@ -25,6 +25,25 @@ class DataCleaner:
     def __init__(self, config: Optional[Config] = None):
         self.config = config if config is not None else Config()
 
+    def remove_duplicates(self, df):
+        """
+        Supprime les lignes dupliquées du DataFrame.
+        """
+        initial_count = len(df)
+        df_clean = df.drop_duplicates(
+            keep=self.config.DUPLICATE_KEEP,
+            subset=self.config.DUPLICATE_SUBSET,
+        )
+        removed_count = initial_count - len(df_clean)
+
+        if removed_count > 0:
+            warnings.warn(
+                f"{removed_count} lignes dupliquées supprimées.",
+                UserWarning,
+            )
+
+        return df_clean.reset_index(drop=True)
+
     def remove_outliers_iqr(self, X: pd.DataFrame, y: pd.Series, threshold: float = 1.5) -> Tuple[
         pd.DataFrame, pd.Series]:
         """

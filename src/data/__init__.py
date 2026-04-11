@@ -23,6 +23,7 @@ __status__ = "Production"
 from .data_loader import DataLoader
 from .feature_extractor import FeatureExtractor
 from .data_cleaner import DataCleaner
+from .dataset_builder import DatasetBuilder
 from .statistics_module import StatisticsModule
 
 __all__ = [

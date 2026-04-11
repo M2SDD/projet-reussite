@@ -953,7 +953,7 @@ class TestConfigIntegration:
 
     def test_config_with_statistics_module(self):
         """Test that Config integrates correctly with StatisticsModule."""
-        from data.statistics_module import StatisticsModule
+        from src.data.statistics_module import StatisticsModule
 
         config = Config()
         stats_module = StatisticsModule(config=config)
@@ -965,7 +965,7 @@ class TestConfigIntegration:
 
     def test_config_with_statistics_module_custom_thresholds(self):
         """Test StatisticsModule with custom Config threshold values."""
-        from data.statistics_module import StatisticsModule
+        from src.data.statistics_module import StatisticsModule
 
         config = Config()
         config.RISK_THRESHOLD_HIGH = 8
@@ -980,7 +980,7 @@ class TestConfigIntegration:
     def test_multiple_modules_share_config(self):
         """Test that multiple modules can share the same Config instance."""
         from src.data_processor import DataProcessor
-        from data.statistics_module import StatisticsModule
+        from src.data.statistics_module import StatisticsModule
 
         config = Config()
         config.RANDOM_STATE = 999
