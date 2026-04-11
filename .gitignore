@@ -180,7 +180,6 @@ cython_debug/
 .idea/
 .idea/*
 .ai
-project_index.json
 
 # Abstra
 # Abstra is an AI-powered process automation framework.
@@ -213,11 +212,22 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Output
+output/
+
 # Rapport
 Objectifs.md
 rapport/*
 !rapport/*.tex
 !rapport/*.pdf
+
+# Presentation
+presentation/*
+!presentation/pictures/
+!presentation/pictures/*/
+!presentation/pictures/*/*.png
+!presentation/*.tex
+!presentation/*.pdf
 
 # Auto Claude generated files
 .auto-claude-security.json
@@ -227,3 +237,4 @@ rapport/*
 .security-key
 logs/security/
 .claude_settings.json
+project_index.json
