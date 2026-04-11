@@ -25,6 +25,9 @@ from tkinter import ttk
 import pandas as pd
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Classe DataFrameViewer
+# ----------------------------------------------------------------------------------------------------------------------
 class DataFrameViewer(ttk.Frame):
     """
     Widget encapsulant un ttk.Treeview avec scrollbars horizontale et verticale
