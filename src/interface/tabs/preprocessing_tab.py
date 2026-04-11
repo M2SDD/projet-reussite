@@ -73,7 +73,7 @@ class PreprocessingTab:
         self._method_importance = tk.BooleanVar(value=False)
         self._method_rfe        = tk.BooleanVar(value=False)
 
-        ttk.Checkbutton(methods_frame, text='Régression linéaire univariée',
+        ttk.Checkbutton(methods_frame, text='Test F',
                         variable=self._method_linear).pack(side=tk.LEFT, padx=4)
         ttk.Checkbutton(methods_frame, text='Information Mutuelle',
                         variable=self._method_mutual).pack(side=tk.LEFT, padx=4)

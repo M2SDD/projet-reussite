@@ -1,10 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------------------------------------------------
+# Created By  : Matthieu PELINGRE
+# Created Date: 09/04/2026
+# version ='1.0'
+# ----------------------------------------------------------------------------------------------------------------------
 """
 Module dédié à la visualisation des performances des modèles.
 Prend en entrée un modèle entraîné et des données, et génère des graphiques.
+
+__author__ = "Matthieu PELINGRE"
+__copyright__ = "Informations de droits d'auteur"
+__credits__ = ["Matthieu PELINGRE"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Matthieu PELINGRE"
+__email__ = "matthieu.pelingre1@etu.univ-lorraine.fr"
+__status__ = "Production"
 """
+# ----------------------------------------------------------------------------------------------------------------------
+# Imports
 # ----------------------------------------------------------------------------------------------------------------------
 import matplotlib.pyplot as plt
 from scipy import stats

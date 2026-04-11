@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------------------------------------------------
+# Created By  : Matthieu PELINGRE
+# Created Date: 09/04/2026
+# version ='1.0'
+# ----------------------------------------------------------------------------------------------------------------------
 """
 Module dédié au nettoyage des données et à la sélection de variables (Feature Selection).
 Ne contient que des opérations purement mathématiques/statistiques.
