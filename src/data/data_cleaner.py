@@ -44,14 +44,27 @@ class DataCleaner:
 
         return df_clean.reset_index(drop=True)
 
-    def remove_outliers_iqr(self, X: pd.DataFrame, y: pd.Series, threshold: float = 1.5) -> Tuple[
-        pd.DataFrame, pd.Series]:
+    def remove_outliers_iqr(self, X: pd.DataFrame, y: pd.Series, threshold: float = 1.5,
+                            strategy: str = 'majority') -> Tuple[pd.DataFrame, pd.Series]:
         """
         Supprime les valeurs aberrantes de X et y en utilisant la méthode
         de l'écart interquartile (IQR).
+
+        Args:
+            strategy (str): Critère de suppression d'une ligne.
+                - 'any'      : supprime si AU MOINS UNE feature est hors borne (défaut, strict).
+                - 'all'      : supprime seulement si TOUTES les features sont hors borne (permissif).
+                - 'majority' : supprime si plus de 50% des features sont hors borne (recommandé
+                               pour les jeux de données à haute dimensionnalité).
         """
         if len(X) != len(y):
             raise ValueError("X et y doivent avoir la même taille.")
+
+        valid_strategies = ('any', 'all', 'majority')
+        if strategy not in valid_strategies:
+            raise ValueError(
+                f"strategy doit être l'un de {valid_strategies}, reçu : '{strategy}'"
+            )
 
         # Calculer le premier quartile (Q1) et le troisième quartile (Q3) pour chaque colonne de X
         Q1 = X.quantile(0.25)
@@ -62,8 +75,14 @@ class DataCleaner:
         lower_bound = Q1 - threshold * IQR
         upper_bound = Q3 + threshold * IQR
 
-        # Condition : True si toutes les valeurs de la ligne sont dans les bornes
-        condition = ~((X < lower_bound) | (X > upper_bound)).any(axis=1)
+        is_outlier = (X < lower_bound) | (X > upper_bound)
+
+        if strategy == 'any':
+            condition = ~is_outlier.any(axis=1)
+        elif strategy == 'all':
+            condition = ~is_outlier.all(axis=1)
+        else:  # majority
+            condition = is_outlier.sum(axis=1) <= (X.shape[1] / 2)
 
         X_clean = X[condition]
         y_clean = y[condition]
@@ -103,6 +122,10 @@ class DataCleaner:
         """
         Supprime les features fortement corrélées entre elles (colinéarité) pour éviter
         de donner des informations redondantes au modèle.
+
+        Pour chaque paire corrélée au-delà du seuil, la feature avec la variance
+        la plus faible est supprimée (celle avec la plus haute variance est conservée
+        car elle porte davantage d'information brute).
         """
         # Calculer la matrice de corrélation absolue
         corr_matrix = X.corr().abs()
@@ -111,16 +134,23 @@ class DataCleaner:
         upper_mask = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
         upper = corr_matrix.where(upper_mask)
 
-        # Trouver les features avec une corrélation supérieure au seuil
-        to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
+        # Pour chaque paire corrélée, supprimer celle avec la variance la plus faible
+        to_drop = set()
+        for col in upper.columns:
+            correlated_partners = upper.index[upper[col] > threshold].tolist()
+            for partner in correlated_partners:
+                if X[col].var() < X[partner].var():
+                    to_drop.add(col)
+                else:
+                    to_drop.add(partner)
 
         if to_drop:
             warnings.warn(
-                f"{len(to_drop)} variables fortement corrélées (>{threshold}) supprimées : {to_drop}",
+                f"{len(to_drop)} variables fortement corrélées (>{threshold}) supprimées : {sorted(to_drop)}",
                 UserWarning
             )
 
-        return X.drop(columns=to_drop)
+        return X.drop(columns=list(to_drop))
 
     def select_top_features_linear(self, X: pd.DataFrame, y: pd.Series, k: int = 10) -> Tuple[pd.DataFrame, List[str]]:
         """
@@ -182,7 +212,7 @@ class DataCleaner:
 
         # Utiliser un Random Forest pour évaluer l'importance
         rf = RandomForestRegressor(
-            n_estimators=100,
+            n_estimators=getattr(self.config, 'RF_N_ESTIMATORS', 100),
             random_state=getattr(self.config, 'RANDOM_STATE', 42),
             n_jobs=-1
         )
@@ -212,7 +242,7 @@ class DataCleaner:
             raise ValueError("Le nombre de features k doit être supérieur à 0.")
 
         estimator = RandomForestRegressor(
-            n_estimators=50,  # On réduit un peu n_estimators pour accélérer RFE
+            n_estimators=max(10, getattr(self.config, 'RF_N_ESTIMATORS', 100) // 4),  # réduit pour accélérer RFE
             random_state=getattr(self.config, 'RANDOM_STATE', 42),
             n_jobs=-1
         )
@@ -227,7 +257,7 @@ class DataCleaner:
         return X_selected, selected_features
 
     def select_features(self, X: pd.DataFrame, y: pd.Series,
-                        methods: Union[str, List[str]] = ['linear', 'mutual_info', 'rfe'],
+                        methods: Union[str, List[str]] = 'linear',
                         k: int = 10,
                         prefilter_variance: bool = True,
                         prefilter_correlation: bool = True) -> Tuple[pd.DataFrame, List[str]]:

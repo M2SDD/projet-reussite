@@ -1,12 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------------------------------------------------
+# Created By  : Matthieu PELINGRE
+# Created Date: 11/04/2026
+# version ='1.0'
+# ----------------------------------------------------------------------------------------------------------------------
 """
 Module orchestrateur pour la préparation complète des données.
 
 Ce module combine le DataLoader, le FeatureExtractor et le DataCleaner
 pour produire un dataset prêt à l'emploi pour les modèles de Machine Learning.
+
+__author__ = "Matthieu PELINGRE"
+__copyright__ = "Informations de droits d'auteur"
+__credits__ = ["Matthieu PELINGRE"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Matthieu PELINGRE"
+__email__ = "matthieu.pelingre1@etu.univ-lorraine.fr"
+__status__ = "Production"
 """
+# ----------------------------------------------------------------------------------------------------------------------
+# Imports
 # ----------------------------------------------------------------------------------------------------------------------
 import pandas as pd
 from typing import Tuple, List, Optional, Union
@@ -18,6 +33,9 @@ from .feature_extractor import FeatureExtractor
 from .data_cleaner import DataCleaner
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Classe DatasetBuilder
+# ----------------------------------------------------------------------------------------------------------------------
 class DatasetBuilder:
     """
     Classe orchestrant tout le pipeline de préparation des données :
@@ -36,7 +54,7 @@ class DatasetBuilder:
                       notes_path: str,
                       drop_inactive_students: bool = True,
                       remove_outliers: bool = False,
-                      selection_methods: Optional[Union[str, List[str]]] = ['linear', 'mutual_info', 'rfe'],
+                      selection_methods: Optional[Union[str, List[str]]] = 'linear',
                       k_features: int = 15,
                       prefilter_variance: bool = True,
                       prefilter_correlation: bool = True) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
@@ -75,7 +93,7 @@ class DatasetBuilder:
 
         # 7. suppression des outliers (optionnel, à activer si nécessaire)
         if remove_outliers:
-            X = self.cleaner.remove_outliers_iqr(X)
+            X, y = self.cleaner.remove_outliers_iqr(X, y)
 
         # 8. Sélection et nettoyage avancé des variables
         selected_features = X.columns.tolist()

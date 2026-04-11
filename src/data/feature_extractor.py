@@ -69,7 +69,7 @@ class FeatureExtractor:
             gaps = times.diff() > pd.Timedelta(minutes=self.config.SESSION_GAP_MINUTES)
             return int(gaps.sum()) + 1
 
-        df_metrics['nombre_sessions'] = grouped.apply(count_sessions)
+        df_metrics['nombre_sessions'] = grouped.apply(count_sessions, include_groups=False)
 
         return df_metrics
 
@@ -88,25 +88,21 @@ class FeatureExtractor:
             hour_counts = group['hour'].value_counts()
             return int(hour_counts.idxmax()) if len(hour_counts) > 0 else 0
 
-        df_temp['heure_pointe'] = df_logs.groupby('pseudo').apply(get_peak_hour)
+        df_temp['heure_pointe'] = df_logs.groupby('pseudo').apply(get_peak_hour, include_groups=False)
 
         # 1. Semaine vs Week-end (5 = Samedi, 6 = Dimanche)
-        df_logs['est_weekend'] = df_logs['heure'].dt.dayofweek >= 5
-        df_temp['actions_weekend'] = df_logs[df_logs['est_weekend']].groupby('pseudo').size()
-        df_temp['actions_semaine'] = df_logs[~df_logs['est_weekend']].groupby('pseudo').size()
+        est_weekend = df_logs['heure'].dt.dayofweek >= 5
+        df_temp['actions_weekend'] = df_logs[est_weekend].groupby('pseudo').size()
+        df_temp['actions_semaine'] = df_logs[~est_weekend].groupby('pseudo').size()
 
         df_temp['ratio_activite_weekend'] = df_temp['actions_weekend'] / actions_totales.replace(0, 1)  # pour éviter division par 0
 
         # 2. Tranches horaires
-        df_logs['heure_jour'] = df_logs['heure'].dt.hour
-        df_temp['actions_matin'] = df_logs[(df_logs['heure_jour'] >= 6) & (df_logs['heure_jour'] < 12)].groupby(
-            'pseudo').size()
-        df_temp['actions_aprem'] = df_logs[(df_logs['heure_jour'] >= 12) & (df_logs['heure_jour'] < 18)].groupby(
-            'pseudo').size()
-        df_temp['actions_soir'] = df_logs[(df_logs['heure_jour'] >= 18) & (df_logs['heure_jour'] < 24)].groupby(
-            'pseudo').size()
-        df_temp['actions_nuit'] = df_logs[(df_logs['heure_jour'] >= 0) & (df_logs['heure_jour'] < 6)].groupby(
-            'pseudo').size()
+        heure_jour = df_logs['heure'].dt.hour
+        df_temp['actions_matin'] = df_logs[(heure_jour >= 6) & (heure_jour < 12)].groupby('pseudo').size()
+        df_temp['actions_aprem'] = df_logs[(heure_jour >= 12) & (heure_jour < 18)].groupby('pseudo').size()
+        df_temp['actions_soir'] = df_logs[(heure_jour >= 18) & (heure_jour < 24)].groupby('pseudo').size()
+        df_temp['actions_nuit'] = df_logs[(heure_jour >= 0) & (heure_jour < 6)].groupby('pseudo').size()
 
         return df_temp.fillna(0)
 
@@ -135,11 +131,12 @@ class FeatureExtractor:
         df_consist = pd.DataFrame(index=df_logs['pseudo'].unique())
         df_consist.index.name = 'pseudo'
 
-        # Extraire uniquement la date
-        df_logs['date'] = df_logs['heure'].dt.date
+        # Extraire uniquement la date (variable locale, sans muter df_logs)
+        date_col = df_logs['heure'].dt.date
 
         # Obtenir les dates uniques par étudiant et trier
-        dates_par_etudiant = df_logs.groupby('pseudo')['date']\
+        dates_par_etudiant = df_logs.assign(date=date_col)\
+                                    .groupby('pseudo')['date']\
                                     .unique()\
                                     .apply(sorted)
 
@@ -170,12 +167,11 @@ class FeatureExtractor:
                 return 0, 0
             dates = pd.to_datetime(pd.Series(dates))
             gaps = dates.diff().dt.days.dropna()
-            return gaps.mean(), gaps.std()
+            std_val = gaps.std() if len(gaps) > 1 else 0.0
+            return gaps.mean(), std_val
 
         # Fonction pour calculer le nombre moyen de jours actifs par semaine
         def calculate_study_frequency(dates):
-            if len(dates) == 0:
-                return 0.0
             if len(dates) == 0:
                 return 0.0
 
@@ -218,7 +214,7 @@ class FeatureExtractor:
             return comp_counts.mean()
 
         df_depth['interactions_moy_par_composant'] = grouped.apply(
-            calc_avg_interactions_per_component
+            calc_avg_interactions_per_component, include_groups=False
         )
 
         # Calcule le taux de changement de composant
@@ -231,7 +227,7 @@ class FeatureExtractor:
             switches = (sorted_group['composant'] != sorted_group['composant'].shift()).sum() - 1
             return switches / len(group)
 
-        df_depth['taux_changement_composant'] = grouped.apply(calc_component_switch_rate)
+        df_depth['taux_changement_composant'] = grouped.apply(calc_component_switch_rate, include_groups=False)
 
         return df_depth
 
@@ -269,9 +265,5 @@ class FeatureExtractor:
 
         # Remplacer les valeurs manquantes générées par les jointures
         df_features = df_features.fillna(0)
-
-        # Nettoyage des colonnes temporaires ajoutées au df_logs original
-        colonnes_temp = ['est_weekend', 'heure_jour', 'date']
-        df_logs.drop(columns=[col for col in colonnes_temp if col in df_logs.columns], inplace=True)
 
         return df_features

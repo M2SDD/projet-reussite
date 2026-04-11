@@ -82,7 +82,7 @@ def test_plot_metrics_comparison():
 
     # Afficher les métriques pour référence
     print("\nMétriques des modèles:")
-    metrics = evaluator.evaluate_all()
+    metrics = evaluator.evaluate_all(include_adjusted_r2=True)
     for model_name, model_metrics in metrics.items():
         print(f"\n  {model_name}:")
         print(f"    R²: {model_metrics['r2']:.4f}")

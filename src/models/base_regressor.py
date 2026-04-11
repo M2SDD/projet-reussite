@@ -134,14 +134,21 @@ class BaseRegressor(ABC):
 
         return 1 - ((1 - r2) * (n - 1) / (n - p - 1))
 
-    def evaluate(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]) -> Dict[str, float]:
+    def evaluate(self, 
+                 X: Union[pd.DataFrame, np.ndarray], 
+                 y: Union[pd.Series, np.ndarray], 
+                 include_adjusted_r2=False) -> Dict[str, float]:
         """Évalue le modèle et retourne les métriques de base."""
-        return {
+        results = {
             'r2': self.compute_r2_score(X, y),
             'rmse': self.compute_rmse(X, y),
             'mae': self.compute_mae(X, y),
-            'adjusted_r2': self.compute_adjusted_r2(X, y)
         }
+
+        if include_adjusted_r2:
+            results['adjusted_r2'] = self.compute_adjusted_r2(X, y)
+
+        return results
 
     def compute_residuals(self, X, y):
         """

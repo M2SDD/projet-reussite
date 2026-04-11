@@ -180,6 +180,7 @@ cython_debug/
 .idea/
 .idea/*
 .ai
+project_index.json
 
 # Abstra
 # Abstra is an AI-powered process automation framework.

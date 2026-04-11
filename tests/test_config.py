@@ -925,31 +925,29 @@ class TestConfigExport:
 class TestConfigIntegration:
     """Test configuration integration with other modules."""
 
-    def test_config_with_data_processor(self):
-        """Test that Config integrates correctly with DataProcessor."""
-        from src.data_processor import DataProcessor
+    def test_config_with_dataset_builder(self):
+        """Test that Config integrates correctly with DatasetBuilder."""
+        from src.data.dataset_builder import DatasetBuilder
 
         config = Config()
-        processor = DataProcessor(config=config)
+        builder = DatasetBuilder(config=config)
 
-        # Verify processor uses the config
-        assert processor.config is config
-        assert processor.config.NOTE_MIN == config.NOTE_MIN
-        assert processor.config.NOTE_MAX == config.NOTE_MAX
+        assert builder.config is config
+        assert builder.config.NOTE_MIN == config.NOTE_MIN
+        assert builder.config.NOTE_MAX == config.NOTE_MAX
 
-    def test_config_with_data_processor_custom_values(self):
-        """Test DataProcessor with custom Config values."""
-        from src.data_processor import DataProcessor
+    def test_config_with_dataset_builder_custom_values(self):
+        """Test DatasetBuilder with custom Config values."""
+        from src.data.dataset_builder import DatasetBuilder
 
         config = Config()
-        config.NOTE_MIN = 5
-        config.NOTE_MAX = 15
+        config.TEST_SPLIT_RATIO = 0.3
+        config.RANDOM_STATE = 123
 
-        processor = DataProcessor(config=config)
+        builder = DatasetBuilder(config=config)
 
-        # Verify custom values are used
-        assert processor.config.NOTE_MIN == 5
-        assert processor.config.NOTE_MAX == 15
+        assert builder.config.TEST_SPLIT_RATIO == 0.3
+        assert builder.config.RANDOM_STATE == 123
 
     def test_config_with_statistics_module(self):
         """Test that Config integrates correctly with StatisticsModule."""
@@ -979,111 +977,92 @@ class TestConfigIntegration:
 
     def test_multiple_modules_share_config(self):
         """Test that multiple modules can share the same Config instance."""
-        from src.data_processor import DataProcessor
+        from src.data.dataset_builder import DatasetBuilder
         from src.data.statistics_module import StatisticsModule
 
         config = Config()
         config.RANDOM_STATE = 999
 
-        processor = DataProcessor(config=config)
+        builder = DatasetBuilder(config=config)
         stats_module = StatisticsModule(config=config)
 
-        # Verify both modules use the same config instance
-        assert processor.config is config
+        assert builder.config is config
         assert stats_module.config is config
-        assert processor.config.RANDOM_STATE == 999
+        assert builder.config.RANDOM_STATE == 999
         assert stats_module.config.RANDOM_STATE == 999
 
     def test_config_modification_affects_modules(self):
         """Test that modifying Config affects modules that use it."""
-        from src.data_processor import DataProcessor
+        from src.data.dataset_builder import DatasetBuilder
 
         config = Config()
-        processor = DataProcessor(config=config)
+        builder = DatasetBuilder(config=config)
 
-        # Modify config after processor creation
-        config.NOTE_MIN = 3
-        config.NOTE_MAX = 17
+        config.TEST_SPLIT_RATIO = 0.25
+        config.RANDOM_STATE = 7
 
-        # Verify processor sees the changes
-        assert processor.config.NOTE_MIN == 3
-        assert processor.config.NOTE_MAX == 17
+        assert builder.config.TEST_SPLIT_RATIO == 0.25
+        assert builder.config.RANDOM_STATE == 7
 
     def test_config_export_and_module_integration(self):
         """Test full workflow: export config, reload it, and use with modules."""
-        from src.data_processor import DataProcessor
+        from src.data.dataset_builder import DatasetBuilder
         import tempfile
 
-        # Create and modify config
         config1 = Config()
         config1.PLOT_DPI = 500
         config1.TEST_SPLIT_RATIO = 0.85
         config1.NOTE_MIN = 2
         config1.NOTE_MAX = 18
 
-        # Export config
         f = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
         f.close()
         try:
             config1.save_to_file(f.name)
-
-            # Reload config
             config2 = Config(config_file=f.name)
+            builder = DatasetBuilder(config=config2)
 
-            # Use reloaded config with DataProcessor
-            processor = DataProcessor(config=config2)
-
-            # Verify processor uses reloaded values
-            assert processor.config.PLOT_DPI == 500
-            assert processor.config.TEST_SPLIT_RATIO == 0.85
-            assert processor.config.NOTE_MIN == 2
-            assert processor.config.NOTE_MAX == 18
+            assert builder.config.PLOT_DPI == 500
+            assert builder.config.TEST_SPLIT_RATIO == 0.85
+            assert builder.config.NOTE_MIN == 2
+            assert builder.config.NOTE_MAX == 18
         finally:
             os.unlink(f.name)
 
-    def test_config_with_real_data_processing(self):
-        """Test Config integration with real data processing workflow."""
-        from src.data_processor import DataProcessor
+    def test_config_with_data_cleaner(self):
+        """Test Config integration with DataCleaner."""
+        from src.data.data_cleaner import DataCleaner
         import pandas as pd
+        import warnings
 
         config = Config()
-        config.NOTE_MIN = 0
-        config.NOTE_MAX = 20
+        config.DUPLICATE_KEEP = 'first'
+        cleaner = DataCleaner(config=config)
 
-        processor = DataProcessor(config=config)
-
-        # Create sample notes data
-        notes_df = pd.DataFrame({
-            'pseudo': [100, 101, 102],
-            'note': [15.0, -5.0, 25.0]  # Include out-of-range values
-        })
-
-        # Process notes (should clip based on config)
+        df = pd.DataFrame({'a': [1, 1, 2], 'b': [3, 3, 4]})
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            cleaned = processor.clean_notes(notes_df)
+            result = cleaner.remove_duplicates(df)
 
-        # Verify clipping used config values
-        assert cleaned['note'].min() >= config.NOTE_MIN
-        assert cleaned['note'].max() <= config.NOTE_MAX
+        assert len(result) == 2
+        assert cleaner.config is config
 
     def test_config_isolation_between_instances(self):
         """Test that different Config instances are isolated from each other."""
-        from src.data_processor import DataProcessor
+        from src.data.dataset_builder import DatasetBuilder
 
         config1 = Config()
-        config1.NOTE_MIN = 5
+        config1.RANDOM_STATE = 1
 
         config2 = Config()
-        config2.NOTE_MIN = 0
+        config2.RANDOM_STATE = 2
 
-        processor1 = DataProcessor(config=config1)
-        processor2 = DataProcessor(config=config2)
+        builder1 = DatasetBuilder(config=config1)
+        builder2 = DatasetBuilder(config=config2)
 
-        # Verify each processor uses its own config
-        assert processor1.config.NOTE_MIN == 5
-        assert processor2.config.NOTE_MIN == 0
-        assert processor1.config is not processor2.config
+        assert builder1.config.RANDOM_STATE == 1
+        assert builder2.config.RANDOM_STATE == 2
+        assert builder1.config is not builder2.config
 
 
 class TestConfigNewDataProcessingParameters:

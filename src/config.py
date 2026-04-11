@@ -158,7 +158,6 @@ class Config:
     GB_CRITERION = 'friedman_mse' # Fonction de mesure de la qualité d'une division
 
 
-    # TODO : Traductions des noms de fonctionnalités (English -> French) à inclure dans le DataProcessor
     FEATURE_NAMES_FR = {
         # Métriques d'activité
         'total_actions': 'actions_totales',

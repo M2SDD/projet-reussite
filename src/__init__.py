@@ -29,8 +29,6 @@ from .data.data_cleaner import DataCleaner
 from .data.dataset_builder import DatasetBuilder
 from .data.statistics_module import StatisticsModule
 
-from .data_processor import DataProcessor
-
 # models
 from .models.ensemble_regressor import EnsembleRegressor
 from .models.linear_regressor import LinearRegressor
@@ -47,7 +45,6 @@ __all__ = [
     'FeatureExtractor',
     'DataCleaner',
     'DatasetBuilder',
-    'DataProcessor',
     'EnsembleRegressor',
     'LinearRegressor',
     'ModelEvaluator',

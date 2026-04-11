@@ -501,7 +501,7 @@ class TestEvaluate:
         X = sample_data.drop(columns=['note'])
         y = sample_data['note']
 
-        metrics = trained_model.evaluate(X, y)
+        metrics = trained_model.evaluate(X, y, include_adjusted_r2=True)
 
         assert isinstance(metrics, dict)
         assert 'r2' in metrics
@@ -514,7 +514,7 @@ class TestEvaluate:
         X = sample_data.drop(columns=['note'])
         y = sample_data['note']
 
-        metrics = trained_model.evaluate(X, y)
+        metrics = trained_model.evaluate(X, y, include_adjusted_r2=True)
 
         required_metrics = ['r2', 'rmse', 'mae', 'adjusted_r2']
         for metric in required_metrics:
@@ -527,7 +527,7 @@ class TestEvaluate:
         y = perfect_linear_data['note']
         model.fit(X, y)
 
-        metrics = model.evaluate(X, y)
+        metrics = model.evaluate(X, y, include_adjusted_r2=True)
 
         assert np.isclose(metrics['r2'], 1.0, rtol=1e-10)
         assert np.isclose(metrics['rmse'], 0.0, atol=1e-10)

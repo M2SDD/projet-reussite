@@ -4,6 +4,7 @@
 # Created By  : Matthieu PELINGRE
 # Created Date: 09/04/2026
 # version ='1.0'
+# TODO : ajouter un attribut 'can_use_adjusted_r2' plutôt que d'utiliser des booléens ?
 # ----------------------------------------------------------------------------------------------------------------------
 """
 Module d'évaluation et de comparaison de modèles de prédiction
@@ -113,7 +114,7 @@ class ModelEvaluator:
 
         return models_with_data
 
-    def evaluate_all(self) -> Dict[str, Dict[str, float]]:
+    def evaluate_all(self, include_adjusted_r2=False) -> Dict[str, Dict[str, float]]:
         """
         Évalue tous les modèles enregistrés et retourne leurs métriques de performance.
 
@@ -133,13 +134,13 @@ class ModelEvaluator:
             y = model_data['y']
 
             # Délégation totale au modèle pour le calcul de toutes les métriques
-            results[name] = model.evaluate(X, y)
+            results[name] = model.evaluate(X, y, include_adjusted_r2=include_adjusted_r2)
 
         return results
 
-    def get_comparison_table(self):
+    def get_comparison_table(self, include_adjusted_r2=False):
         """Crée un tableau de comparaison avec les métriques de tous les modèles côte à côte."""
-        metrics_dict = self.evaluate_all()
+        metrics_dict = self.evaluate_all(include_adjusted_r2=include_adjusted_r2)
         df = pd.DataFrame.from_dict(metrics_dict, orient='index')
         return df.round(4)
 
@@ -217,10 +218,10 @@ class ModelEvaluator:
 
         return fig
 
-    def plot_metrics_comparison(self, include_adjusted_r2=True):
+    def plot_metrics_comparison(self, include_adjusted_r2=False):
         """Crée un graphique à barres comparant les métriques de tous les modèles."""
         # Obtenir les métriques de tous les modèles
-        metrics_dict = self.evaluate_all()
+        metrics_dict = self.evaluate_all(include_adjusted_r2=include_adjusted_r2)
 
         # Extraire les noms des modèles et les métriques
         model_names = list(metrics_dict.keys())
@@ -272,7 +273,7 @@ class ModelEvaluator:
 
         return fig
 
-    def get_recommendation(self):
+    def get_recommendation(self, use_adjusted_r2=False):
         """
         Fournit une recommandation sur le meilleur modèle basée sur les métriques de performance.
 
@@ -285,39 +286,40 @@ class ModelEvaluator:
         ce qui évite le sur-ajustement et favorise les modèles plus simples.
         """
         # Obtenir les métriques de tous les modèles
-        all_metrics = self.evaluate_all()
+        all_metrics = self.evaluate_all(include_adjusted_r2=use_adjusted_r2)
 
         # Trouver le modèle avec le meilleur R² ajusté
         # En cas d'égalité, utiliser le RMSE le plus faible comme critère secondaire
         best_model = None
         best_metrics = None
-        best_adjusted_r2 = -np.inf
+        best_r2 = -np.inf
         best_rmse = np.inf
 
         for model_name, metrics in all_metrics.items():
-            adjusted_r2 = metrics['adjusted_r2']
+            r2 = getattr(metrics, 'adjusted_r2', metrics['r2'])
+
             rmse = metrics['rmse']
 
             # Comparer d'abord par R² ajusté (plus élevé est meilleur)
-            if adjusted_r2 > best_adjusted_r2:
+            if r2 > best_r2:
                 best_model = model_name
                 best_metrics = metrics
-                best_adjusted_r2 = adjusted_r2
+                best_r2 = r2
                 best_rmse = rmse
             # En cas d'égalité de R² ajusté, utiliser le RMSE (plus faible est meilleur)
-            elif adjusted_r2 == best_adjusted_r2 and rmse < best_rmse:
+            elif r2 == best_r2 and rmse < best_rmse:
                 best_model = model_name
                 best_metrics = metrics
-                best_adjusted_r2 = adjusted_r2
+                best_r2 = r2
                 best_rmse = rmse
 
         # Construire la raison de la recommandation
-        reason = f"Meilleur R² ajusté ({best_adjusted_r2:.4f})"
+        reason = f"Meilleur R²{' ajusté' if use_adjusted_r2 else ''} ({best_r2:.4f})"
 
         # Si plusieurs modèles ont le même R² ajusté, mentionner le RMSE
         models_with_same_r2 = [
             name for name, m in all_metrics.items()
-            if m['adjusted_r2'] == best_adjusted_r2
+            if getattr(m, 'adjusted_r2', m['r2']) == best_r2
         ]
         if len(models_with_same_r2) > 1:
             reason += f" avec le RMSE le plus faible ({best_rmse:.4f})"
@@ -330,7 +332,7 @@ class ModelEvaluator:
             'all_metrics': all_metrics
         }
 
-    def export_results(self, output_dir):
+    def export_results(self, output_dir, include_adjusted_r2=False):
         """
         Exporte les résultats de comparaison (tableau et graphiques) dans un répertoire.
         Elle crée automatiquement le répertoire s'il n'existe pas, puis exporte :
@@ -358,7 +360,7 @@ class ModelEvaluator:
         plot_dpi = getattr(self.config, 'PLOT_DPI', 300)
 
         # 1. Exporter le tableau de comparaison en CSV
-        comparison_table = self.get_comparison_table()
+        comparison_table = self.get_comparison_table(include_adjusted_r2=include_adjusted_r2)
         csv_path = os.path.join(output_dir, 'comparison_table.csv')
         comparison_table.to_csv(csv_path)
 
@@ -375,7 +377,7 @@ class ModelEvaluator:
         plt.close(residuals_fig)
 
         # 4. Exporter le graphique de comparaison des métriques
-        metrics_fig = self.plot_metrics_comparison()
+        metrics_fig = self.plot_metrics_comparison(include_adjusted_r2=include_adjusted_r2)
         metrics_path = os.path.join(output_dir, f'metrics_comparison.{plot_format}')
         metrics_fig.savefig(metrics_path, dpi=plot_dpi, bbox_inches='tight')
         plt.close(metrics_fig)

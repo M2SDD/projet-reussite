@@ -497,7 +497,7 @@ class TestEvaluate:
         X = sample_data.drop(columns=['note'])
         y = sample_data['note']
 
-        metrics = trained_model.evaluate(X, y)
+        metrics = trained_model.evaluate(X, y, include_adjusted_r2=True)
 
         expected_keys = {'r2', 'rmse', 'mae', 'adjusted_r2'}
         assert set(metrics.keys()) == expected_keys

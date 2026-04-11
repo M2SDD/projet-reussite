@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from src import Config, DataLoader, DataProcessor, LinearRegressor, StatisticsModule, EnsembleRegressor, ModelEvaluator
+from src import Config, DataLoader, DatasetBuilder, LinearRegressor, StatisticsModule, EnsembleRegressor, ModelEvaluator
 
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
@@ -56,14 +56,12 @@ if __name__ == '__main__':
 
     # Initialisation des composants principaux
     data_loader = DataLoader()
-    data_processor = DataProcessor()
     statistics_module = StatisticsModule()
 
     # Vérification de l'architecture OOP
     print("✓ Tous les modules sont chargés avec succès")
     print(f"✓ Config: {type(config).__name__}")
     print(f"✓ DataLoader: {type(data_loader).__name__}")
-    print(f"✓ DataProcessor: {type(data_processor).__name__}")
     print(f"✓ StatisticsModule: {type(statistics_module).__name__}")
     print()
 
@@ -113,22 +111,29 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Build the full student dataset
-    processor = DataProcessor(config=config)
-    student_df = processor.build_student_dataset(logs_df, notes_df)
+    # Build the full student dataset via DatasetBuilder
+    builder = DatasetBuilder(config=config)
+    X, y, selected_features = builder.build_dataset(
+        LOGS_FILE, 
+        NOTES_FILE,
+        selection_methods=['linear', 'mutual_info', 'rfe']
+        )
 
-    # Display cleaning report
-    report = processor.get_cleaning_report()
-    print("Cleaning Report:")
-    for key, value in report.items():
-        print(f"  - {key}: {value}")
-    print()
+    # Train/Test split
+    print("Splitting data into train and test sets...")
+    X_train, X_test, y_train, y_test = builder.get_train_test_split(
+        X,
+        y
+    )
 
-    # Display final student dataset
-    print(f"Final student dataset shape: {student_df.shape}")
+    # Reconstitution d'un DataFrame complet pour les analyses suivantes
+    analysis_df = pd.concat([X, y], axis=1)
+
+    print(f"Final dataset shape: {analysis_df.shape}")
+    print(f"Selected features ({len(selected_features)}): {', '.join(selected_features[:5])}{'...' if len(selected_features) > 5 else ''}")
     print()
-    print("Sample student data:")
-    print(student_df.head(5))
+    print("Sample data:")
+    print(analysis_df.head(5))
     print()
 
     # --------------------------------------------------------------------------
@@ -139,39 +144,27 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Use student_df directly as analysis_df (engagement features already included by build_student_dataset)
-    analysis_df = student_df.copy()
-    print(f"Analysis dataset: {analysis_df.shape[0]} students, {analysis_df.shape[1]} features")
+    engagement_cols = [col for col in analysis_df.columns if col != 'note']
+    print(f"Analysis dataset: {analysis_df.shape[0]} students, {len(engagement_cols)} features")
     print()
 
-    # Compute feature correlations with target (note)
+    # Corrélations features → cible
     print("Computing feature correlations with target variable (note)...")
-    feature_correlations = processor.compute_feature_correlations(analysis_df, target_column='note')
+    feature_correlations = X.corrwith(y).abs().sort_values(ascending=False)
     print("Top 10 features most correlated with final grade:")
-    print(feature_correlations.abs().sort_values(ascending=False).head(10))
+    print(feature_correlations.head(10))
     print()
 
-    # Compute descriptive statistics for all features
+    # Statistiques descriptives
     print("Computing descriptive statistics for engagement features...")
-    engagement_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note']]
-    descriptive_stats = processor.compute_descriptive_statistics(analysis_df[engagement_cols])
+    descriptive_stats = X.describe().T
     print("Descriptive statistics summary (first 5 features):")
     print(descriptive_stats.head(5))
     print()
 
-    # Test statistical significance of features
-    print("Testing statistical significance of features...")
-    significance_results = processor.test_feature_significance(analysis_df, target_column='note')
-    print("Features with significant correlation (p < 0.05):")
-    significant_features = significance_results[significance_results['p_value'] < 0.05].sort_values('p_value')
-    print(f"  - Total significant features: {len(significant_features)}/{len(significance_results)}")
-    print("  - Top 5 most significant features:")
-    print(significant_features.head(5)[['correlation', 'p_value', 'is_significant']])
-    print()
-
-    # Compute correlation matrix for multicollinearity check
+    # Matrice de corrélation inter-features
     print("Computing feature correlation matrix for multicollinearity analysis...")
-    correlation_matrix = processor.compute_feature_feature_correlations(analysis_df[engagement_cols[:10]])  # Limit to first 10 for display
+    correlation_matrix = X[engagement_cols[:10]].corr()
     print("Sample correlation matrix (first 10 features):")
     print(correlation_matrix)
     print()
@@ -187,55 +180,12 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Prepare data for feature selection (exclude target and ID columns)
-    feature_cols = [col for col in analysis_df.columns if col not in ['pseudo', 'note']]
-    features_df = analysis_df[feature_cols + ['note']].copy()
+    # La sélection de features est déjà effectuée par DatasetBuilder.build_dataset
+    best_features_df = X
 
-    print(f"Starting feature selection with {len(feature_cols)} features...")
+    print(f"Feature selection already performed by DatasetBuilder.")
+    print(f"  - Selected features ({len(selected_features)}): {', '.join(selected_features[:5])}{'...' if len(selected_features) > 5 else ''}")
     print()
-
-    # Step 1: Variance-based selection
-    print("Step 1: Removing low-variance features...")
-    variance_filtered_df = processor.select_by_variance(features_df, threshold=0.01)
-    variance_removed = len(feature_cols) - (len(variance_filtered_df.columns) - 1)  # -1 for note column
-    print(f"  - Features removed: {variance_removed}")
-    print(f"  - Features remaining: {len(variance_filtered_df.columns) - 1}")
-    print()
-
-    # Step 2: Correlation-based selection
-    print("Step 2: Removing highly correlated features...")
-    correlation_filtered_df = processor.select_by_correlation(variance_filtered_df, threshold=0.90)
-    correlation_removed = (len(variance_filtered_df.columns) - 1) - (len(correlation_filtered_df.columns) - 1)
-    print(f"  - Features removed: {correlation_removed}")
-    print(f"  - Features remaining: {len(correlation_filtered_df.columns) - 1}")
-    print()
-
-    # Step 3: SelectKBest for top features
-    # Get remaining feature columns (exclude 'note' if it's still in the dataframe)
-    remaining_features = [col for col in correlation_filtered_df.columns if col != 'note']
-    k_features = min(15, len(remaining_features))  # Ensure k doesn't exceed available features
-    print(f"Step 3: Selecting top {k_features} features using statistical tests...")
-
-    # Prepare data for select_k_best: features + note
-    selectkbest_df = correlation_filtered_df[remaining_features + ['note']].copy()
-    best_features_df = processor.select_k_best(
-        selectkbest_df,
-        target='note',
-        k=k_features
-    )
-    print(f"  - Features selected: {len(best_features_df.columns)}")
-    print(f"  - Selected features: {', '.join(best_features_df.columns.tolist())}")
-    print()
-
-    # Display final feature selection summary
-    print("Feature Selection Summary:")
-    print(f"  - Initial features: {len(feature_cols)}")
-    print(f"  - After variance filter: {len(variance_filtered_df.columns) - 1}")
-    print(f"  - After correlation filter: {len(remaining_features)}")
-    print(f"  - Final selected features: {len(best_features_df.columns)}")
-    print(f"  - Reduction rate: {((len(feature_cols) - len(best_features_df.columns)) / len(feature_cols) * 100):.1f}%")
-    print()
-
     print("Feature selection completed successfully")
     print()
 
@@ -250,13 +200,13 @@ if __name__ == '__main__':
     # Generate comprehensive statistics report for student dataset
     print("Generating descriptive statistics report for student dataset...")
     stats = StatisticsModule(config=config)
-    student_report = stats.generate_report(student_df)
+    student_report = stats.generate_report(analysis_df)
     print(student_report)
     print()
 
     # Generate statistics report for engagement features
     print("Generating descriptive statistics report for engagement features...")
-    engagement_report = stats.generate_report(analysis_df[engagement_cols])
+    engagement_report = stats.generate_report(X)
     print(engagement_report)
     print()
 
@@ -268,29 +218,11 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Prepare final dataset for regression (merge selected features with grades)
-    print("Preparing regression dataset...")
-    regression_features = [col for col in best_features_df.columns]
-    regression_df = analysis_df[regression_features + ['note']].dropna(subset=['note']).copy()
-
-    print(f"  - Features: {len(regression_features)}")
-    print(f"  - Samples: {len(regression_df)}")
-    print(f"  - Feature names: {', '.join(regression_features[:5])}{'...' if len(regression_features) > 5 else ''}")
-    print()
-
     # Initialize regression model
     regression_model = LinearRegressor(config=config)
 
-    # Train/Test split
-    print("Splitting data into train and test sets...")
-    X_train, X_test, y_train, y_test = regression_model.train_test_split(
-        regression_df,
-        target_column='note',
-        test_size=0.2,
-        random_state=42
-    )
-    print(f"  - Training set: {len(X_train)} samples ({len(X_train)/len(regression_df)*100:.1f}%)")
-    print(f"  - Test set: {len(X_test)} samples ({len(X_test)/len(regression_df)*100:.1f}%)")
+    print(f"  - Training set: {len(X_train)} samples ({len(X_train)/len(selected_features)*100:.1f}%)")
+    print(f"  - Test set: {len(X_test)} samples ({len(X_test)/len(selected_features)*100:.1f}%)")
     print()
 
     # Train the model
@@ -323,7 +255,6 @@ if __name__ == '__main__':
     print("Model Performance on Training Set:")
     train_metrics = regression_model.evaluate(X_train, y_train)
     print(f"  - R² Score:           {train_metrics['r2']:.4f}")
-    print(f"  - Adjusted R² Score:  {train_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {train_metrics['rmse']:.4f}")
     print(f"  - MAE:                {train_metrics['mae']:.4f}")
     print()
@@ -332,7 +263,6 @@ if __name__ == '__main__':
     print("Model Performance on Test Set:")
     test_metrics = regression_model.evaluate(X_test, y_test)
     print(f"  - R² Score:           {test_metrics['r2']:.4f}")
-    print(f"  - Adjusted R² Score:  {test_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {test_metrics['rmse']:.4f}")
     print(f"  - MAE:                {test_metrics['mae']:.4f}")
     print()
@@ -373,7 +303,7 @@ if __name__ == '__main__':
 
     # Model comparison summary
     print("Model Summary:")
-    print(f"  - Features used:      {len(regression_features)}")
+    print(f"  - Features used:      {len(selected_features)}")
     print(f"  - Training samples:   {len(X_train)}")
     print(f"  - Test samples:       {len(X_test)}")
     print(f"  - Test R²:            {test_metrics['r2']:.4f}")
@@ -393,33 +323,11 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
 
-    # Prepare final dataset for regression (merge selected features with grades)
-    print("Preparing regression dataset...")
-    regression_features = [col for col in best_features_df.columns]
-    regression_df = analysis_df[regression_features + ['note']].dropna(subset=['note']).copy()
-
-    print(f"  - Features: {len(regression_features)}")
-    print(f"  - Samples: {len(regression_df)}")
-    print(f"  - Feature names: {', '.join(regression_features[:5])}{'...' if len(regression_features) > 5 else ''}")
-    print()
-
     # Initialize regression model
     ensemble_model = EnsembleRegressor(config=config)
 
-    # Train/Test splitc
-    print("Splitting data into train and test sets...")
-    X_train, X_test, y_train, y_test = ensemble_model.train_test_split(
-        regression_df,
-        target_column='note',
-        test_size=0.2,
-        random_state=42
-    )
-    print(f"  - Training set: {len(X_train)} samples ({len(X_train)/len(regression_df)*100:.1f}%)")
-    print(f"  - Test set: {len(X_test)} samples ({len(X_test)/len(regression_df)*100:.1f}%)")
-    print()
-
     # Train the model
-    print("Training multiple linear regression model...")
+    print("Training random forest regression model...")
     ensemble_model.fit(X_train, y_train)
     print("  ✓ Model trained successfully")
     print()
@@ -439,7 +347,6 @@ if __name__ == '__main__':
     print("Model Performance on Training Set:")
     train_metrics = ensemble_model.evaluate(X_train, y_train)
     print(f"  - R² Score:           {train_metrics['r2']:.4f}")
-    print(f"  - Adjusted R² Score:  {train_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {train_metrics['rmse']:.4f}")
     print(f"  - MAE:                {train_metrics['mae']:.4f}")
     print()
@@ -448,7 +355,6 @@ if __name__ == '__main__':
     print("Model Performance on Test Set:")
     test_metrics = ensemble_model.evaluate(X_test, y_test)
     print(f"  - R² Score:           {test_metrics['r2']:.4f}")
-    print(f"  - Adjusted R² Score:  {test_metrics['adjusted_r2']:.4f}")
     print(f"  - RMSE:               {test_metrics['rmse']:.4f}")
     print(f"  - MAE:                {test_metrics['mae']:.4f}")
     print()
@@ -489,7 +395,7 @@ if __name__ == '__main__':
 
     # Model comparison summary
     print("Model Summary:")
-    print(f"  - Features used:      {len(regression_features)}")
+    print(f"  - Features used:      {len(selected_features)}")
     print(f"  - Training samples:   {len(X_train)}")
     print(f"  - Test samples:       {len(X_test)}")
     print(f"  - Test R²:            {test_metrics['r2']:.4f}")
@@ -497,7 +403,7 @@ if __name__ == '__main__':
     print(f"  - Overfitting check:  {'Minimal' if abs(train_metrics['r2'] - test_metrics['r2']) < 0.1 else 'Possible'}")
     print()
 
-    print("Multiple linear regression model demonstration completed successfully")
+    print("Random Forest regression model demonstration completed successfully")
     print()
 
 
@@ -533,7 +439,7 @@ if __name__ == '__main__':
     print("✓ Descriptive Statistics:    Completed")
     print("✓ Regression Model:          Completed")
     print()
-    print(f"Final {reco['best_model']} model ready for deployment with {len(regression_features)} features")
+    print(f"Final {reco['best_model']} model ready for deployment with {len(selected_features)} features")
     if reco.get('metrics') is not None:
         print(f"Model performance: R²={reco['metrics']['r2']:.4f}, RMSE={reco['metrics']['rmse']:.4f}")
     else:

@@ -233,7 +233,7 @@ class TestEvaluateAll:
         y = sample_data['note']
 
         evaluator.add_model('test_model', trained_model, X, y)
-        results = evaluator.evaluate_all()
+        results = evaluator.evaluate_all(include_adjusted_r2=True)
 
         assert 'test_model' in results
         assert 'r2' in results['test_model']
@@ -260,7 +260,7 @@ class TestEvaluateAll:
         y = sample_data['note']
 
         evaluator.add_model('test_model', trained_model, X, y)
-        results = evaluator.evaluate_all()
+        results = evaluator.evaluate_all(include_adjusted_r2=True)
 
         metrics = results['test_model']
 
@@ -284,7 +284,7 @@ class TestComparisonTable:
         y = sample_data['note']
 
         evaluator.add_model('test_model', trained_model, X, y)
-        table = evaluator.get_comparison_table()
+        table = evaluator.get_comparison_table(include_adjusted_r2=True)
 
         assert isinstance(table, pd.DataFrame)
         assert 'test_model' in table.index
@@ -701,7 +701,7 @@ class TestPlotMetricsComparison:
         y = sample_data['note']
 
         evaluator.add_model('single_model', trained_model, X, y)
-        fig = evaluator.plot_metrics_comparison()
+        fig = evaluator.plot_metrics_comparison(include_adjusted_r2=True)
 
         # Should work with single model
         assert fig is not None
@@ -724,7 +724,7 @@ class TestPlotMetricsComparison:
         for i in range(5):
             evaluator.add_model(f'model_{i}', trained_model, X, y)
 
-        fig = evaluator.plot_metrics_comparison()
+        fig = evaluator.plot_metrics_comparison(include_adjusted_r2=True)
 
         # Should work with many models
         assert fig is not None
@@ -824,7 +824,7 @@ class TestExportResults:
     def test_export_results_csv_content(self, evaluator_with_models):
         """Test that exported CSV contains correct data."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            evaluator_with_models.export_results(tmpdir)
+            evaluator_with_models.export_results(tmpdir, include_adjusted_r2=True)
 
             csv_path = os.path.join(tmpdir, 'comparison_table.csv')
             df = pd.read_csv(csv_path, index_col=0)
@@ -925,7 +925,7 @@ class TestExportResults:
     def test_export_results_csv_readable(self, evaluator_with_models):
         """Test that exported CSV is properly formatted and readable."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            evaluator_with_models.export_results(tmpdir)
+            evaluator_with_models.export_results(tmpdir, include_adjusted_r2=True)
 
             csv_path = os.path.join(tmpdir, 'comparison_table.csv')
 
@@ -995,7 +995,7 @@ def test_evaluate_all():
     evaluator.add_model('model_reduced', model2, X_reduced, y)
 
     # Evaluate all models
-    results = evaluator.evaluate_all()
+    results = evaluator.evaluate_all(include_adjusted_r2=True)
 
     # Verify results structure
     assert 'model_full' in results
