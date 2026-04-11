@@ -222,6 +222,7 @@ rapport/*
 !rapport/*.pdf
 
 # Presentation
+Maquette.md
 presentation/*
 !presentation/pictures/
 !presentation/pictures/*/

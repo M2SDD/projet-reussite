@@ -30,7 +30,7 @@ from .models import LinearRegressor, EnsembleRegressor
 from .evaluation import ModelEvaluator
 
 # ----------------------------------------------------------------------------------------------------------------------
-# MAIN
+# Fonction de test / démo
 # ----------------------------------------------------------------------------------------------------------------------
 def test():
     # Initialisation de la configuration
