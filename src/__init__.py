@@ -45,9 +45,9 @@ __all__ = [
     'FeatureExtractor',
     'DataCleaner',
     'DatasetBuilder',
-    'EnsembleRegressor',
+    'StatisticsModule',
     'LinearRegressor',
+    'EnsembleRegressor',
     'ModelEvaluator',
     'ModelVisualizer',
-    'StatisticsModule',
 ]
