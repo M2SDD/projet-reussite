@@ -218,6 +218,11 @@ output/
 # Rapport
 Objectifs.md
 rapport/*
+!rapport/figures
+rapport/figures/*
+!rapport/figures/*.puml
+!rapport/figures/*.tex
+!rapport/figures/*.png
 !rapport/*.tex
 !rapport/*.pdf
 
