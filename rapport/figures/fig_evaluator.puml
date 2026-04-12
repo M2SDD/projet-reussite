@@ -1,0 +1,59 @@
+@startuml fig_evaluator
+' ============================================================
+'  Module d'évaluation : ModelEvaluator et ModelVisualizer
+'  Générer : java -jar plantuml.jar fig_evaluator.puml
+' ============================================================
+
+' ---- ModelEvaluator ----
+class ModelEvaluator {
+    + config : Config
+    + models : dict[str, dict]
+    --
+    + add_model(name, model, X, y) : None
+    + evaluate_all(include_adj_r2) : dict
+    + get_comparison_table() : DataFrame
+    + get_recommendation() : dict
+    + plot_predictions() : Figure
+    + plot_residuals() : Figure
+    + plot_metrics_comparison() : Figure
+    + export_results(output_dir) : None
+}
+
+' ---- ModelVisualizer ----
+class ModelVisualizer {
+    {static} + plot_predictions(\n    regressor, X, y, ax) : Axes
+    {static} + plot_residuals(\n    regressor, X, y, ax) : Axes
+    {static} + plot_qq_plot(\n    regressor, X, y, ax) : Axes
+}
+
+' ---- BaseRegressor (simplifié) ----
+abstract class BaseRegressor {
+    (instance entraînée)
+    --
+    + predict(X) : ndarray
+    + evaluate(X, y) : dict
+    + compute_r2_score(X, y) : float
+    + compute_residuals(X, y) : ndarray
+}
+
+' ---- Relations ----
+ModelEvaluator --> ModelVisualizer : délègue le tracé\ndes graphiques
+ModelEvaluator o--> BaseRegressor : agrège\n(0..*)
+
+' ---- Notes ----
+note right of ModelEvaluator
+  Chaque modèle est enregistré avec
+  ses données de test (X_test, y_test)
+  via add_model().
+  evaluate_all() délègue le calcul
+  des métriques à chaque modèle.
+end note
+
+note right of ModelVisualizer
+  Toutes les méthodes sont
+  **statiques** : elles prennent
+  le modèle et les données
+  en paramètre.
+end note
+
+@enduml

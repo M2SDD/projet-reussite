@@ -1,0 +1,83 @@
+@startuml fig_hierarchy
+' ============================================================
+'  Hiérarchie des classes de modèles de prédiction
+'  Générer : java -jar plantuml.jar fig_hierarchy.puml
+' ============================================================
+
+
+' ---- Classe abstraite de base ----
+abstract class BaseRegressor {
+    + config : Config
+    + model : sklearn model
+    + scaler : RobustScaler
+    --
+    + fit(X, y) : BaseRegressor
+    + predict(X) : ndarray
+    + evaluate(X, y) : dict
+    + compute_r2_score(X, y) : float
+    + compute_rmse(X, y) : float
+    + compute_mae(X, y) : float
+    + compute_adjusted_r2(X, y) : float
+    + compute_residuals(X, y) : ndarray
+    + check_residuals_normality(X, y) : dict
+    # {abstract} _fit(X, y) : None
+    # _validate_input_data(X, y) : None
+    # _check_is_fitted() : None
+}
+
+' ---- Régression linéaire ----
+class LinearRegressor {
+    (hérite de BaseRegressor)
+    --
+    + get_coefficients() : dict
+    # _fit(X, y) : None
+}
+
+' ---- Modèles d'ensemble ----
+class EnsembleRegressor {
+    + model_type : str
+    --
+    + get_feature_importance(\n    feature_names) : DataFrame
+    # _fit(X, y) : None
+}
+
+' ---- Configuration ----
+class Config {
+    + RANDOM_STATE : int
+    + TEST_SPLIT_RATIO : float
+    + CV_FOLDS : int
+    + RF_N_ESTIMATORS : int
+    + RF_MAX_DEPTH : int
+    + RF_MAX_FEATURES : str
+    + RF_BOOTSTRAP : bool
+    + GB_N_ESTIMATORS : int
+    + GB_LEARNING_RATE : float
+    + GB_MAX_DEPTH : int
+    + ...
+    --
+    + _validate() : None
+    + save_to_file(path) : None
+}
+
+' ---- Relations ----
+BaseRegressor <|-- LinearRegressor
+BaseRegressor <|-- EnsembleRegressor
+Config --> BaseRegressor : injecté\n(constructeur)
+
+' ---- Note sur le Template Method ----
+note right of BaseRegressor
+  <b>Template Method</b>
+  fit() appelle dans l'ordre :
+  1. _validate_input_data()
+  2. scaler.fit_transform()
+  3. _fit()  [abstract]
+end note
+
+note bottom of EnsembleRegressor
+  model_type ∈ {
+    "random_forest",
+    "gradient_boosting"
+  }
+end note
+
+@enduml

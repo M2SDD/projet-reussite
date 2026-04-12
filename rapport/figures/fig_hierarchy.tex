@@ -1,0 +1,122 @@
+% ============================================================
+%  Figure : Hiérarchie des classes de modèles
+%  Compiler : pdflatex fig_hierarchy.tex
+% ============================================================
+\documentclass[tikz, border=8pt]{standalone}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+
+\definecolor{pythonblue}{HTML}{356D9C}
+\definecolor{pythonyellow}{HTML}{FED03E}
+\definecolor{pythondark}{HTML}{1E4068}
+\definecolor{pythonlight}{HTML}{D6E8F5}
+
+% Macro pour dessiner une boîte de classe UML à 3 compartiments
+% #1 = nom du noeud, #2 = position, #3 = classe, #4 = attributs, #5 = méthodes
+\newcommand{\umlclass}[5]{
+  \node (#1) at #2 {%
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|p{5.2cm}|}
+      \hline
+      \cellcolor{pythonlight}\centering\small\ttfamily\bfseries #3 \\
+      \hline
+      \small\ttfamily #4 \\
+      \hline
+      \small\ttfamily #5 \\
+      \hline
+    \end{tabular}
+  };
+}
+
+\newcommand{\umlabstract}[5]{
+  \node (#1) at #2 {%
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|p{5.2cm}|}
+      \hline
+      \cellcolor{pythonlight!60}\centering\small\ttfamily\itshape\bfseries
+        $\langle\langle$abstract$\rangle\rangle$ \\ [-4pt]
+      \cellcolor{pythonlight!60}\centering\small\ttfamily\itshape #3 \\
+      \hline
+      \small\ttfamily\itshape #4 \\
+      \hline
+      \small\ttfamily\itshape #5 \\
+      \hline
+    \end{tabular}
+  };
+}
+
+\begin{document}
+\begin{tikzpicture}[
+  inherit/.style={-{Triangle[open, length=9pt, width=7pt]}, thick, pythonblue},
+  assoc/.style={-{Stealth[length=7pt]}, thick, pythonblue!70, dashed}
+]
+
+% ---- BaseRegressor (abstract) ----
+\umlabstract{br}{(0, 0)}{BaseRegressor}{%
+  + config: Config \\
+  + model: sklearn \\
+  + scaler: RobustScaler%
+}{%
+  + fit(X, y) \\
+  + predict(X) \\
+  + evaluate(X, y) \\
+  + compute\_r2\_score(...) \\
+  + compute\_rmse(...) \\
+  + compute\_mae(...) \\
+  + check\_residuals\_normality(...) \\
+  -- \textit{\_fit(X, y)  [abstract]}%
+}
+
+% ---- LinearRegressor ----
+\umlclass{lr}{(-4, -7)}{LinearRegressor}{%
+  (hérite de BaseRegressor)%
+}{%
+  + get\_coefficients() \\
+  -- \_fit(X, y)%
+}
+
+% ---- EnsembleRegressor ----
+\umlclass{er}{(4, -7)}{EnsembleRegressor}{%
+  + model\_type: str \\
+  \quad ('random\_forest' | 'gradient\_boosting')%
+}{%
+  + get\_feature\_importance(...) \\
+  -- \_fit(X, y)%
+}
+
+% ---- Config ----
+\node (cfg) at (8.5, 0) {%
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{|p{4.5cm}|}
+    \hline
+    \cellcolor{pythonyellow!40}\centering\small\ttfamily\bfseries Config \\
+    \hline
+    \small\ttfamily
+    + RANDOM\_STATE: int \\
+    + TEST\_SPLIT\_RATIO: float \\
+    + RF\_N\_ESTIMATORS: int \\
+    + RF\_MAX\_DEPTH: int \\
+    + GB\_LEARNING\_RATE: float \\
+    + ... \\
+    \hline
+    \small\ttfamily
+    + \_validate() \\
+    + save\_to\_file(path) \\
+    \hline
+  \end{tabular}
+};
+
+% Héritage
+\draw[inherit] (lr.north) -- ++(0, 1.0) -| (br.south);
+\draw[inherit] (er.north) -- ++(0, 1.0) -| (br.south);
+
+% Association Config
+\draw[assoc] (cfg.west) -- (br.east)
+  node[midway, above, font=\tiny\itshape, color=pythonblue]{injecté};
+
+\end{tikzpicture}
+\end{document}
